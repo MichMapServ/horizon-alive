@@ -1,84 +1,85 @@
-# WorldFX pipeline integration and setting persistence.
-# Real primed entities and the GPU renderer are not present in this sandbox.
+# Horizon Alive v0.9.1: color codes, multiline feedback, saved toggles, no GPU required.
+# The output is stored exactly as returned by the WIT command.
+
 [[step]]
 command = "alive status"
-expect.feedback = "Alive | v0.9 | actif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations | suivi approx."
+expect.feedback = "§6§lHORIZON ALIVE§r §8│ §fÉTAT §7v0.9.1\n§7Module : §aACTIF §8│ §7Détection : §aACTIF\n§7Animation : §aACTIF §8│ §7Position : §eESTIMÉE\n§7Effets : §f0 §8│ §7En attente : §f0\n§7Amorçages probables : §f0\n§8Redstone / chaînes non détectables.§r"
 
 [[step]]
 command = "alive diag"
-expect.feedback = "Alive | Observations: 0 | programmes: 0 | effets demarres: 0 | commandes soumises: 0 | termines: 0 | annules: 0"
+expect.feedback = "§6§lHORIZON ALIVE§r §8│ §fDIAGNOSTICS\n§6§lDÉTECTION§r §8│ §7Probables : §f0\n§b§lANIMATION§r §8│ §7Programmées : §f0\n§7Démarrées : §f0 §8│ §7Terminées : §f0\n§7Annulées : §f0\n§e§lRENDU§r §8│ §7Lots : §f0\n§7Commandes envoyées : §f0\n§8Envoi ≠ affichage confirmé.§r"
 
 [[step]]
 command = "alive diag last"
-expect.feedback = "Alive | Aucun evenement depuis le chargement"
+expect.feedback = "§6§lHORIZON ALIVE§r §8│ §fDERNIÈRE ÉTAPE\n§7Aucun événement depuis le chargement§r"
 
 [[step]]
 command = "alive detect last"
-expect.feedback = "Alive | Aucun amorcage probable observe"
+expect.feedback = "§6§lHORIZON ALIVE§r §8│ §fDERNIÈRE TNT\n§7Aucun amorçage probable observé§r"
 
 [[step]]
 command = "alive detect fx off"
-expect.feedback = "Alive | Animation automatique desactivee; detection conservee"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §eAnimation désactivée ; détection conservée§r"
 
 [[step]]
 command = "alive quality low"
-expect.feedback = "Alive | Preferences enregistrees"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §aPréférences enregistrées§r"
 
 [[step]]
 command = "alive smoke off"
-expect.feedback = "Alive | Preferences enregistrees"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §aPréférences enregistrées§r"
 
 [[step]]
 command = "alive flash off"
-expect.feedback = "Alive | Preferences enregistrees"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §aPréférences enregistrées§r"
 
 [[step]]
 command = "alive debug on"
-expect.feedback = "Alive | Logs TNT detailles actives"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §aLogs TNT détaillés activés§r"
 
 [[step]]
 reload = true
 command = "alive status"
-expect.feedback = "Alive | v0.9 | actif | detection ON | animation estimee OFF | 0 effets | 0 attentes | 0 observations | suivi approx."
+expect.feedback = "§6§lHORIZON ALIVE§r §8│ §fÉTAT §7v0.9.1\n§7Module : §aACTIF §8│ §7Détection : §aACTIF\n§7Animation : §cINACTIF §8│ §7Position : §eESTIMÉE\n§7Effets : §f0 §8│ §7En attente : §f0\n§7Amorçages probables : §f0\n§8Redstone / chaînes non détectables.§r"
 
 [[step]]
 command = "alive detect fx on"
-expect.feedback = "Alive | Animation 3D activee sur detonations estimees (non confirmees)"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §eEffets activés sur détonations estimées§r"
 
 [[step]]
 command = "alive debug off"
-expect.feedback = "Alive | Logs TNT detailles desactives"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §eLogs TNT détaillés désactivés§r"
 
 [[step]]
 command = "alive off"
-expect.feedback = "Alive | Mod desactive. Effets temporaires annules"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §eMod désactivé ; effets temporaires annulés§r"
 
 [[step]]
 reload = true
 command = "alive status"
-expect.feedback = "Alive | v0.9 | inactif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations | suivi approx."
+expect.feedback = "§6§lHORIZON ALIVE§r §8│ §fÉTAT §7v0.9.1\n§7Module : §cINACTIF §8│ §7Détection : §aACTIF\n§7Animation : §aACTIF §8│ §7Position : §eESTIMÉE\n§7Effets : §f0 §8│ §7En attente : §f0\n§7Amorçages probables : §f0\n§8Redstone / chaînes non détectables.§r"
 
 [[step]]
 command = "alive on"
-expect.feedback = "Alive | Mod active"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §aMod activé§r"
 
 [[step]]
 command = "alive graphics off"
-expect.feedback = "Alive | Aucun effet HUD actif"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §7Aucun effet HUD actif§r"
 
 [[step]]
 command = "alive follow fixed"
-expect.feedback = "Alive | Position TNT fixee au bloc initial"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §aPosition fixée au bloc initial§r"
 
 [[step]]
 command = "alive status"
-expect.feedback = "Alive | v0.9 | actif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations | suivi fixe"
+expect.feedback = "§6§lHORIZON ALIVE§r §8│ §fÉTAT §7v0.9.1\n§7Module : §aACTIF §8│ §7Détection : §aACTIF\n§7Animation : §aACTIF §8│ §7Position : §fFIXE\n§7Effets : §f0 §8│ §7En attente : §f0\n§7Amorçages probables : §f0\n§8Redstone / chaînes non détectables.§r"
 
 [[step]]
 command = "alive follow estimate"
-expect.feedback = "Alive | Position TNT estimee par physique simplifiee (non garantie)"
+expect.feedback = "§6§lHORIZON§e§l ALIVE§r §8»§r §ePosition estimée, non suivie par le moteur§r"
 
 [[step]]
 reload = true
 command = "alive status"
-expect.feedback = "Alive | v0.9 | actif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations | suivi approx."
+expect.feedback = "§6§lHORIZON ALIVE§r §8│ §fÉTAT §7v0.9.1\n§7Module : §aACTIF §8│ §7Détection : §aACTIF\n§7Animation : §aACTIF §8│ §7Position : §eESTIMÉE\n§7Effets : §f0 §8│ §7En attente : §f0\n§7Amorçages probables : §f0\n§8Redstone / chaînes non détectables.§r"
