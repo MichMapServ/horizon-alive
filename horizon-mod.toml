@@ -1,0 +1,9 @@
+id = "horizon_alive"
+name = "Horizon Alive"
+version = "0.3.3"
+description = "Ambient particles and attack feedback rendered on the HUD"
+authors = ["Horizon Alive contributors"]
+api = "0.1"
+side = "client"
+capabilities = ["game-read", "input", "render", "ui", "storage"]
+experimental = ["render", "input", "ui"]
