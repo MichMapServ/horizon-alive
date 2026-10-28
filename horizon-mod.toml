@@ -1,9 +1,9 @@
 id = "horizon_alive"
 name = "Horizon Alive"
-version = "0.5.0"
-description = "Retires unwanted HUD particles; preserves settings while 3D rendering requires native Horizon integration"
+version = "0.6.0"
+description = "Opt-in 3D world-space particles using vanilla commands; no HUD overlays"
 authors = ["Horizon Alive contributors"]
 api = "0.1"
 side = "client"
-capabilities = ["render", "ui", "storage"]
+capabilities = ["game-read", "command", "render", "ui", "storage"]
 experimental = ["render", "ui"]
