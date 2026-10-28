@@ -90,6 +90,7 @@ impl Detector {
 
     pub fn last(&self) -> Option<&IgnitionCandidate> { self.last.as_ref() }
 
+    #[cfg(test)]
     pub fn pending(&self) -> bool { self.pending.is_some() }
 
     fn recently_reported(&self, pos: [i32; 3], dimension: &str, tick: u64) -> bool {
@@ -160,10 +161,10 @@ impl Detector {
                     item: item.to_owned(),
                 })
             });
-            if let Some(target) = current.or_else(|| previous.cloned()) {
-                if !self.recently_reported(target.pos, &target.dimension, s.tick) {
-                    self.pending = Some(Pending { target, started: s.tick });
-                }
+            if let Some(target) = current.or_else(|| previous.cloned())
+                && !self.recently_reported(target.pos, &target.dimension, s.tick)
+            {
+                self.pending = Some(Pending { target, started: s.tick });
             }
         }
 
