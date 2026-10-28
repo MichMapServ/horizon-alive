@@ -485,7 +485,7 @@ mod tests {
 
     #[test]
     fn particle_alpha_stays_within_bounds() {
-        for ttl in 1..=255 {
+        for ttl in 1_u8..=255_u8 {
             for age in 0..ttl {
                 let alpha = (u32::from(ttl - age) * 185 / u32::from(ttl)).min(185);
                 assert!(alpha <= 185);
