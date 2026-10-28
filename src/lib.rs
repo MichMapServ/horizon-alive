@@ -1,14 +1,16 @@
-//! Horizon Alive v0.8 — sandboxed .hmod, real XYZ vanilla particle commands.
+//! Horizon Alive v0.9.1 — sandboxed .hmod, real XYZ vanilla particle commands.
 //!
 //! The SDK API 0.1 has no prime_fuse or detonated event. Inferred player
 //! ignitions are labelled as estimates, not confirmed engine TNT events.
 mod detector;
 mod diagnostics;
+mod presentation;
 mod trajectory;
 mod worldfx;
 
 use detector::{Detector, Observation};
-use diagnostics::{Diagnostics, label, point};
+use diagnostics::{Diagnostics, point};
+use presentation::{caution, error, label, success};
 use trajectory::TntMotion;
 use horizon_mod_sdk::{Mod, Registration, chat, command, game, input, log, render, storage, ui};
 use worldfx::{Blast, Config, Quality, COOLDOWN_TICKS, LIFE_TICKS, MAX_ACTIVE};
@@ -110,62 +112,97 @@ impl Alive {
     }
 
     fn settings(&self) {
+        let state = |on| if on { "ACTIF" } else { "INACTIF" };
         ui::set_settings(&[
             ui::Widget::Text(ui::TextWidget {
                 id: 10,
-                text: "TNT: detection locale probable seulement. Les commandes ne confirment pas le rendu.".into(),
-                color: 0xB7DDE8,
+                text: "HORIZON ALIVE  •  WORLD FX".into(),
+                color: 0xFFB454,
+            }),
+            ui::Widget::Text(ui::TextWidget {
+                id: 11,
+                text: "TNT locale probable  ·  rendu vanilla 3D".into(),
+                color: 0xA6B4C7,
+            }),
+            ui::Widget::Text(ui::TextWidget {
+                id: 12,
+                text: "— EFFETS VISUELS —".into(),
+                color: 0x70DBEA,
             }),
             ui::Widget::Button(ui::ButtonWidget {
                 id: 1,
-                label: format!("Alive: {}", if self.enabled { "ON" } else { "OFF" }),
+                label: format!("Horizon Alive : {}", state(self.enabled)),
             }),
             ui::Widget::Button(ui::ButtonWidget {
                 id: 2,
-                label: format!("Qualite: {}", self.config.quality.name()),
+                label: format!(
+                    "Qualité : {}",
+                    match self.config.quality {
+                        Quality::Low => "Faible",
+                        Quality::Balanced => "Équilibrée",
+                        Quality::High => "Élevée",
+                    },
+                ),
             }),
             ui::Widget::Button(ui::ButtonWidget {
                 id: 3,
-                label: format!("Echelle visuelle: {:.1}x", self.config.scale),
+                label: format!("Échelle : {:.1}×", self.config.scale),
             }),
             ui::Widget::Button(ui::ButtonWidget {
                 id: 4,
-                label: format!("Fumee: {}", if self.config.smoke { "ON" } else { "OFF" }),
+                label: format!("Fumée : {}", state(self.config.smoke)),
             }),
             ui::Widget::Button(ui::ButtonWidget {
                 id: 5,
-                label: format!("Flash: {}", if self.config.flash { "ON" } else { "OFF" }),
+                label: format!("Flash : {}", state(self.config.flash)),
+            }),
+            ui::Widget::Text(ui::TextWidget {
+                id: 13,
+                text: "— DÉTECTION & POSITION —".into(),
+                color: 0x70DBEA,
             }),
             ui::Widget::Button(ui::ButtonWidget {
                 id: 6,
-                label: format!("Detection probable: {}", if self.detection_enabled { "ON" } else { "OFF" }),
+                label: format!("Détection TNT : {}", state(self.detection_enabled)),
             }),
             ui::Widget::Button(ui::ButtonWidget {
                 id: 7,
-                label: format!("Animation estimee: {}", if self.automatic_visuals { "ON" } else { "OFF" }),
-            }),
-            ui::Widget::Button(ui::ButtonWidget {
-                id: 8,
-                label: format!("Logs detailles: {}", if self.debug { "ON" } else { "OFF" }),
+                label: format!("Effet automatique : {}", state(self.automatic_visuals)),
             }),
             ui::Widget::Button(ui::ButtonWidget {
                 id: 9,
-                label: format!("Position prevue: {}", if self.estimated_follow { "ON (approx.)" } else { "OFF (fixe)" }),
+                label: format!(
+                    "Position TNT : {}",
+                    if self.estimated_follow { "Estimation" } else { "Fixe" },
+                ),
+            }),
+            ui::Widget::Text(ui::TextWidget {
+                id: 14,
+                text: "— DIAGNOSTICS —".into(),
+                color: 0x70DBEA,
+            }),
+            ui::Widget::Button(ui::ButtonWidget {
+                id: 8,
+                label: format!("Logs détaillés : {}", state(self.debug)),
+            }),
+            ui::Widget::Text(ui::TextWidget {
+                id: 15,
+                text: "Les TNT redstone/chaîne ne sont pas observables.".into(),
+                color: 0xA6B4C7,
             }),
         ]);
     }
 
     fn status(&self) -> String {
-        label(&format!(
-            "v0.9 | {} | detection {} | animation estimee {} | {} effets | {} attentes | {} observations | suivi {}",
-            if self.enabled { "actif" } else { "inactif" },
-            if self.detection_enabled { "ON" } else { "OFF" },
-            if self.automatic_visuals { "ON" } else { "OFF" },
+        presentation::status(
+            self.enabled,
+            self.detection_enabled,
+            self.automatic_visuals,
+            self.estimated_follow,
             self.active.len(),
             self.scheduled.len(),
             self.diag.candidates,
-            if self.estimated_follow { "approx." } else { "fixe" }
-        ))
+        )
     }
 
     fn detect_tick(&mut self, tick: u64, player: &game::Player) {
@@ -191,9 +228,7 @@ impl Alive {
             self.diag.candidates = self.diag.candidates.saturating_add(1);
             let event_id = self.diag.candidates;
             let position = point(event.pos);
-            let message = format!(
-                "TNT | Amorçage probable #{event_id} | {position} | non confirme"
-            );
+            let message = presentation::primed(event_id, event.pos);
             // chat.show already prefixes the mod name; do not add a second one.
             chat::show(&message);
             self.trace("PRIMED_ESTIMATE", &format!(
@@ -287,19 +322,19 @@ impl Alive {
     }
 
     fn begin(&mut self, with_tnt: bool) -> Result<Option<String>, String> {
-        if !self.enabled { return Err(label("Activer le mod avec /alive on")); }
-        let player = game::get_player().ok_or_else(|| label("Ouvrir un monde"))?;
-        let clock = game::get_clock().ok_or_else(|| label("Horloge du monde indisponible"))?;
+        if !self.enabled { return Err(error("Activer le mod avec /alive on")); }
+        let player = game::get_player().ok_or_else(|| error("Ouvrir un monde"))?;
+        let clock = game::get_clock().ok_or_else(|| error("Horloge du monde indisponible"))?;
         if self.last_trigger.is_some_and(|last| {
             clock.game_time >= last && clock.game_time - last < COOLDOWN_TICKS
         }) {
-            return Err(label("Attendre la fin du delai entre deux apercus"));
+            return Err(caution("Attendre avant un nouvel aperçu"));
         }
-        let hit = game::raycast(12.0).ok_or_else(|| label("Viser un bloc a moins de 12 blocs"))?;
+        let hit = game::raycast(12.0).ok_or_else(|| error("Viser un bloc à moins de 12 blocs"))?;
         let origin = worldfx::anchor_from_block(hit.block_x, hit.block_y, hit.block_z);
 
         if with_tnt {
-            let cmd = worldfx::summon_tnt(origin).ok_or_else(|| label("Coordonnees invalides"))?;
+            let cmd = worldfx::summon_tnt(origin).ok_or_else(|| error("Coordonnées invalides"))?;
             // The command is queued for execution after this hook.
             // Fuse:1s is the one-tick TNT requested by the old command.
             // It is not known whether the game accepts the command.
@@ -339,10 +374,12 @@ impl Alive {
         self.last_trigger = Some(clock.game_time);
         self.dimension = Some(player.dimension);
 
-        Ok(Some(label(if with_tnt {
-            "TNT demandee; animation prevue au tick suivant. Invocation non confirmee"
+        Ok(Some(caution(if with_tnt {
+            "TNT demandée ; succès non confirmé.
+Effet prévu au tick suivant."
         } else {
-            "Apercu 3D demande, sans destruction. Utiliser /alive diag pour les compteurs"
+            "Aperçu 3D demandé, sans dégâts.
+/alive diag : vérifier les commandes envoyées."
         })))
     }
 
@@ -353,14 +390,14 @@ impl Alive {
                     "low" => Quality::Low,
                     "balanced" => Quality::Balanced,
                     "high" => Quality::High,
-                    _ => return Err(label("Usage : /alive quality low|balanced|high")),
+                    _ => return Err(error("Usage : /alive quality low|balanced|high")),
                 };
                 save(QUALITY, self.config.quality.as_byte());
             }
             "scale" => {
-                let size: f64 = value.parse().map_err(|_| label("Usage : /alive scale 0.5..2.0"))?;
+                let size: f64 = value.parse().map_err(|_| error("Usage : /alive scale 0.5..2.0"))?;
                 if !size.is_finite() || !(0.5..=2.0).contains(&size) {
-                    return Err(label("Usage : /alive scale 0.5..2.0"));
+                    return Err(error("Usage : /alive scale 0.5..2.0"));
                 }
                 self.config.scale = (size * 10.0).round() / 10.0;
                 save(SCALE, (self.config.scale * 10.0) as u8);
@@ -369,7 +406,7 @@ impl Alive {
                 self.config.smoke = match value {
                     "on" => true,
                     "off" => false,
-                    _ => return Err(label("Usage : /alive smoke on|off")),
+                    _ => return Err(error("Usage : /alive smoke on|off")),
                 };
                 save(SMOKE, u8::from(self.config.smoke));
             }
@@ -377,14 +414,14 @@ impl Alive {
                 self.config.flash = match value {
                     "on" => true,
                     "off" => false,
-                    _ => return Err(label("Usage : /alive flash on|off")),
+                    _ => return Err(error("Usage : /alive flash on|off")),
                 };
                 save(FLASH, u8::from(self.config.flash));
             }
-            _ => return Err(label("Parametre inconnu. Utiliser /alive help")),
+            _ => return Err(error("Paramètre inconnu. /alive help")),
         }
         self.settings();
-        Ok(Some(label("Preferences enregistrees")))
+        Ok(Some(success("Préférences enregistrées")))
     }
 }
 
@@ -393,7 +430,7 @@ impl Mod for Alive {
         render::set_hud(&[]);
         log::write(
             log::Level::Info,
-            "MOD/INIT | Horizon Alive v0.9 charge. Aucun evenement TNT confirme n'est expose par le SDK.",
+            "MOD/INIT | Horizon Alive v0.9.1 chargé. Aucun evenement TNT confirme n'est expose par le SDK.",
         );
         Ok((Self::load(), Registration::new().command("alive").on_tick()))
     }
@@ -462,28 +499,36 @@ impl Mod for Alive {
     }
 
     fn command(&mut self, name: &str, args: &str) -> Result<Option<String>, String> {
-        if name != "alive" { return Err(label("Commande inconnue")); }
+        if name != "alive" { return Err(error("Commande inconnue")); }
         match args.trim() {
-            "" | "help" => Ok(Some(label(
-                "status|diag|tnt|preview|detect on|off|fx on|off|follow estimate|fixed|debug on|off|quality|scale|smoke|flash"
-            ))),
+            "" | "help" | "help 1" => Ok(presentation::help_page(1)),
+            "help 2" => Ok(presentation::help_page(2)),
+            "help 3" => Ok(presentation::help_page(3)),
+            other if other.starts_with("help ") => {
+                Err(error("Pages disponibles : /alive help 1|2|3"))
+            },
             "status" => Ok(Some(self.status())),
-            "diag" | "diagnostics" => Ok(Some(label(&self.diag.report()))),
-            "diag last" => Ok(Some(label(if self.diag.last.is_empty() {
-                "Aucun evenement depuis le chargement"
-            } else { &self.diag.last }))),
+            "diag" | "diagnostics" => Ok(Some(presentation::diagnostics(&self.diag))),
+            "diag last" => Ok(Some(presentation::detail(
+                "DERNIÈRE ÉTAPE",
+                if self.diag.last.is_empty() {
+                    "Aucun événement depuis le chargement"
+                } else {
+                    &self.diag.last
+                },
+            ))),
             "on" => {
                 self.enabled = true;
                 save(ENABLED, 1);
                 self.settings();
-                Ok(Some(label("Mod active")))
+                Ok(Some(success("Mod activé")))
             }
             "off" => {
                 self.enabled = false;
                 self.clear_pending("user command");
                 save(ENABLED, 0);
                 self.settings();
-                Ok(Some(label("Mod desactive. Effets temporaires annules")))
+                Ok(Some(caution("Mod désactivé ; effets temporaires annulés")))
             }
             "tnt" => self.begin(true),
             "preview" => self.begin(false),
@@ -491,7 +536,7 @@ impl Mod for Alive {
                 self.detection_enabled = true;
                 save(DETECTION, 1);
                 self.settings();
-                Ok(Some(label("Detection locale probable activee")))
+                Ok(Some(success("Détection locale activée (estimée)")))
             }
             "detect off" => {
                 self.detection_enabled = false;
@@ -501,7 +546,7 @@ impl Mod for Alive {
                 self.diag.cancelled = self.diag.cancelled.saturating_add(dropped as u64);
                 save(DETECTION, 0);
                 self.settings();
-                Ok(Some(label("Detection desactivee; attentes annulees")))
+                Ok(Some(caution("Détection désactivée ; attentes annulées")))
             }
             "detect fx on" => {
                 self.detection_enabled = true;
@@ -509,7 +554,7 @@ impl Mod for Alive {
                 save(DETECTION, 1);
                 save(AUTO_FX, 1);
                 self.settings();
-                Ok(Some(label("Animation 3D activee sur detonations estimees (non confirmees)")))
+                Ok(Some(caution("Effets activés sur détonations estimées")))
             }
             "detect fx off" => {
                 self.automatic_visuals = false;
@@ -517,48 +562,53 @@ impl Mod for Alive {
                 self.scheduled.clear();
                 save(AUTO_FX, 0);
                 self.settings();
-                Ok(Some(label("Animation automatique desactivee; detection conservee")))
+                Ok(Some(caution("Animation désactivée ; détection conservée")))
             }
-            "detect last" => Ok(Some(label(&self.detector.last().map_or_else(
-                || "Aucun amorcage probable observe".into(),
-                |event| format!(
-                    "Dernier amorcage probable : {} | {} | tick estime {}",
-                    point(event.pos), event.dimension, event.estimated_detonation_tick
+            "detect last" => Ok(Some(presentation::detail(
+                "DERNIÈRE TNT",
+                &self.detector.last().map_or_else(
+                    || "Aucun amorçage probable observé".into(),
+                    |event| format!(
+                        "Amorçage probable : {}
+Dimension : {}
+Tick estimé : {}",
+                        point(event.pos), event.dimension, event.estimated_detonation_tick
+                    ),
                 ),
-            )))),
+            ))),
             "follow estimate" => {
                 self.estimated_follow = true;
                 save(FOLLOW, 1);
                 self.settings();
-                Ok(Some(label("Position TNT estimee par physique simplifiee (non garantie)")))
+                Ok(Some(caution("Position estimée, non suivie par le moteur")))
             }
             "follow fixed" => {
                 self.estimated_follow = false;
                 save(FOLLOW, 0);
                 self.settings();
-                Ok(Some(label("Position TNT fixee au bloc initial")))
+                Ok(Some(success("Position fixée au bloc initial")))
             }
             "debug on" => {
                 self.debug = true;
                 save(DEBUG, 1);
                 self.settings();
-                Ok(Some(label("Logs TNT detailles actives")))
+                Ok(Some(success("Logs TNT détaillés activés")))
             }
             "debug off" => {
                 self.debug = false;
                 save(DEBUG, 0);
                 self.settings();
-                Ok(Some(label("Logs TNT detailles desactives")))
+                Ok(Some(caution("Logs TNT détaillés désactivés")))
             }
             "graphics off" => {
                 render::set_hud(&[]);
-                Ok(Some(label("Aucun effet HUD actif")))
+                Ok(Some(success("Aucun effet HUD actif")))
             }
             other => {
                 if let Some((key, value)) = other.split_once(' ') {
                     self.configure(key, value)
                 } else {
-                    Err(label("Usage : /alive help"))
+                    Err(error("Commande invalide. /alive help"))
                 }
             }
         }
