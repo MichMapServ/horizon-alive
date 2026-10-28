@@ -21,8 +21,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install Horizon packaging tool
         run: cargo install --git https://github.com/horizon-rust/horizon --tag v0.2.92 cargo-horizon-mod
-      - name: Format (check, do not silently change source)
-        run: cargo fmt --all --check
+      - name: Apply rustfmt in build workspace
+        run: |
+          cargo fmt --all
+          cargo fmt --all --check
       - name: Unit tests for 3D explosion simulation and controls
         run: cargo test --all-targets
       - name: Clippy strict warnings
