@@ -406,6 +406,8 @@ impl ExplosionManager {
 
     pub fn len(&self) -> usize { self.active.len() }
 
+    pub fn is_empty(&self) -> bool { self.active.is_empty() }
+
     pub fn cleanup(&mut self, now_seconds: f64) {
         self.active.retain(|e| {
             now_seconds.is_finite()
