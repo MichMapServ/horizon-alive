@@ -85,13 +85,14 @@ impl Effects {
             Style::Glow => -0.0007,
             _ => 0.0003,
         };
+        let ttl = 36 + (self.random() * 30.0) as u8;
         self.insert(Particle {
             x,
             y,
             vx: wind,
             vy: drift,
             age: 0,
-            ttl: 36 + (self.random() * 30.0) as u8,
+            ttl,
             rgb,
             style,
         });
@@ -117,13 +118,14 @@ impl Effects {
         for _ in 0..count.min(MAX_PARTICLES) {
             let angle = self.random() * std::f32::consts::TAU;
             let speed = 0.002 + self.random() * 0.015;
+            let ttl = 13 + (self.random() * 13.0) as u8;
             self.insert(Particle {
                 x: 0.5,
                 y: 0.52,
                 vx: angle.cos() * speed,
                 vy: angle.sin() * speed,
                 age: 0,
-                ttl: 13 + (self.random() * 13.0) as u8,
+                ttl,
                 rgb,
                 style,
             });
