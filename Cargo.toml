@@ -1,0 +1,13 @@
+[package]
+name = "horizon-alive"
+version = "0.3.3"
+edition = "2024"
+license = "MIT"
+description = "Lightweight screen-space particles for Horizon"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+horizon-mod-sdk = { git = "https://github.com/horizon-rust/horizon", tag = "v0.2.92" }
