@@ -1,7 +1,7 @@
 id = "horizon_alive"
 name = "Horizon Alive"
-version = "0.8.0"
-description = "Local TNT ignition inference and 3D WorldFX with honest pipeline diagnostics"
+version = "0.9.0"
+description = "TNT motion estimation and 3D WorldFX; no global TNT entity access in the SDK"
 authors = ["Horizon Alive contributors"]
 api = "0.1"
 side = "client"
