@@ -2,7 +2,7 @@
 # Real primed entities and the GPU renderer are not present in this sandbox.
 [[step]]
 command = "alive status"
-expect.feedback = "Alive | v0.8 | actif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations"
+expect.feedback = "Alive | v0.9 | actif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations | suivi approx."
 
 [[step]]
 command = "alive diag"
@@ -39,7 +39,7 @@ expect.feedback = "Alive | Logs TNT detailles actives"
 [[step]]
 reload = true
 command = "alive status"
-expect.feedback = "Alive | v0.8 | actif | detection ON | animation estimee OFF | 0 effets | 0 attentes | 0 observations"
+expect.feedback = "Alive | v0.9 | actif | detection ON | animation estimee OFF | 0 effets | 0 attentes | 0 observations | suivi approx."
 
 [[step]]
 command = "alive detect fx on"
@@ -56,7 +56,7 @@ expect.feedback = "Alive | Mod desactive. Effets temporaires annules"
 [[step]]
 reload = true
 command = "alive status"
-expect.feedback = "Alive | v0.8 | inactif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations"
+expect.feedback = "Alive | v0.9 | inactif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations | suivi approx."
 
 [[step]]
 command = "alive on"
@@ -65,3 +65,20 @@ expect.feedback = "Alive | Mod active"
 [[step]]
 command = "alive graphics off"
 expect.feedback = "Alive | Aucun effet HUD actif"
+
+[[step]]
+command = "alive follow fixed"
+expect.feedback = "Alive | Position TNT fixee au bloc initial"
+
+[[step]]
+command = "alive status"
+expect.feedback = "Alive | v0.9 | actif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations | suivi fixe"
+
+[[step]]
+command = "alive follow estimate"
+expect.feedback = "Alive | Position TNT estimee par physique simplifiee (non garantie)"
+
+[[step]]
+reload = true
+command = "alive status"
+expect.feedback = "Alive | v0.9 | actif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations | suivi approx."
