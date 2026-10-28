@@ -1,7 +1,7 @@
 id = "horizon_alive"
 name = "Horizon Alive"
-version = "0.9.0"
-description = "TNT motion estimation and 3D WorldFX; no global TNT entity access in the SDK"
+version = "0.9.1"
+description = "Horizon Alive WorldFX: polished colored help and TNT diagnostics"
 authors = ["Horizon Alive contributors"]
 api = "0.1"
 side = "client"
