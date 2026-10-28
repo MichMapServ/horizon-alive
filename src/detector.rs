@@ -86,6 +86,7 @@ impl Detector {
         self.recent.clear();
     }
 
+    #[cfg(test)]
     pub fn total(&self) -> u64 { self.count }
 
     pub fn last(&self) -> Option<&IgnitionCandidate> { self.last.as_ref() }
