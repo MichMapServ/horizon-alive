@@ -1,0 +1,30 @@
+# This is an integration scenario for the official Horizon mod sandbox.
+# Runs without a graphical game client.
+
+[[step]]
+command = "alive off"
+expect.feedback = "Horizon Alive disabled"
+
+[[step]]
+command = "alive demo"
+expect.error = "Enable Horizon Alive with /alive on first"
+
+[[step]]
+reload = true
+command = "alive status"
+expect.feedback = "Alive: false, 0 particles"
+
+[[step]]
+command = "alive on"
+expect.feedback = "Horizon Alive enabled"
+
+[[step]]
+command = "alive demo"
+expect.feedback = "2D explosion preview"
+
+[[step]]
+ticks = 50
+
+[[step]]
+command = "alive status"
+expect.feedback = "Alive: true, 0 particles"
