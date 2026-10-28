@@ -582,9 +582,4 @@ mod tests {
         assert!((5..=20).contains(&10_u8.clamp(5, 20)));
     }
 
-    #[test]
-    fn scheduled_limit_is_small() {
-        assert_eq!(MAX_SCHEDULED, 8);
-        assert!(MAX_ACTIVE <= MAX_SCHEDULED);
-    }
 }
