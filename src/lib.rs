@@ -135,11 +135,13 @@ impl Mod for Alive {
             self.last_attack = false;
             return;
         }
-        if let Some(old) = self.last_health {
-            if player.health.is_finite() && old.is_finite() && player.health < old - 0.01 {
-                self.burst(0xFF9F87, 8);
-                render::shake(0.045, 0.13);
-            }
+        if let Some(old) = self.last_health
+            && player.health.is_finite()
+            && old.is_finite()
+            && player.health < old - 0.01
+        {
+            self.burst(0xFF9F87, 8);
+            render::shake(0.045, 0.13);
         }
         self.last_health = Some(player.health);
         let attacking = input::mapping("key.attack").is_some_and(|key| key.down);
@@ -173,6 +175,7 @@ impl Mod for Alive {
             "on" => { self.set_active(true); Ok(Some("Horizon Alive enabled".into())) }
             "off" => { self.set_active(false); Ok(Some("Horizon Alive disabled".into())) }
             "status" => Ok(Some(format!("Alive: {}, {} particles", self.active, self.particles.len()))),
+            "demo" if !self.active => Err("Enable Horizon Alive with /alive on first".into()),
             "demo" => { self.burst(0xFFC878, 32); Ok(Some("2D explosion preview".into())) }
             _ => Err("Use /alive help".into()),
         }

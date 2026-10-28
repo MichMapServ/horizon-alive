@@ -31,6 +31,8 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: Build .hmod
         run: cargo horizon-mod build
+      - name: Exercise commands and reload in Horizon sandbox
+        run: cargo horizon-mod test
       - name: Verify .hmod sandbox
         run: cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
       - name: Package integrity
