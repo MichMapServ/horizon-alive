@@ -1,65 +1,43 @@
-# Horizon Alive v0.4.0
+# Horizon Alive v0.5.0
 
-A configurable, **screen-space** visual effects mod for Minecraft Horizon, built as a single native WebAssembly component inside a `.hmod` archive. It is **not** a 3D world particle renderer.
+This update RETIRES the unwanted 2D HUD particle effects. It does not render 3D explosions in a normal Horizon .hmod. The SDK API 0.1 cannot render world geometry or observe TNT detonations.
 
-## Effects
+The code now includes a testable Rust module, src/explosion3d.rs, that computes *world-space* TNT explosion geometry. It models a pixelated XZ-ground shockwave, a layered fireball dome and white/gray smoke ribbons. This is a native-renderer-ready mathematical core, NOT a working native renderer.
 
-- A restrained daytime dust/leaf ambience, nighttime fireflies, Nether embers and End motes.
-- Swing sparkles with colors inferred from the block in the crosshair.
-- Health-loss sparkles and an optional subtle camera jolt.
-- Motion dust trails when moving, with teleport detection.
-- Manual 2D previews of water rings, explosions, fireflies and swings.
+## What is delivered
 
-The `render` capability draws only HUD geometry. No world-space particles, vanilla explosion hook, water-surface wake detection, or shader replacement is exposed by the Horizon 0.1 client mod API.
+- A .hmod that clears legacy HUD shapes and has no tick/frame particle hooks.
+- Existing enabled, quality and motion preferences are retained in the isolated mod storage.
+- A pure Rust 3D explosion core with time-based overlapping phases, deterministic seed, independent gameplay and visual radius, terrain sampling callback, and limits of 350 / 900 / 2000 primitives per event and four simultaneous events.
+- Cargo and Horizon SDK tests and sandbox checks in GitHub Actions.
+- Exact source audit and native integration requirements in docs/EXPLOSION_3D.md.
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `/alive status` | Current settings and live particle count |
-| `/alive on`, `/alive off` | Enable/disable effects |
-| `/alive quality low` | Minimal particle density |
-| `/alive quality balanced` | Default |
-| `/alive quality high` | More particles |
-| `/alive motion reduced` | Suppress camera jolts |
-| `/alive motion normal` | Enable camera jolts |
-| `/alive graphics off` | Disable the mod's HUD renderer for troubleshooting |
-| `/alive graphics on` | Restore HUD rendering |
-| `/alive demo boom` | 2D shock ring and sparks |
-| `/alive demo water` | 2D ripples and droplets |
-| `/alive demo fireflies` | 2D luminous motes |
-| `/alive demo punch` | 2D swing sparks |
-
-Settings are persisted in Horizon's isolated mod storage. The previous `alive.enabled` setting from v0.3.x is preserved. The same settings are also available in Options > Mods.
+/ alive status (remove space after slash when entering it in-game)
+- /alive on or off: saves a future-renderer preference.
+- /alive quality low, balanced or high: saves target fidelity.
+- /alive motion reduced or normal: saves camera-motion preference.
+- /alive graphics off: explicitly clears any retained legacy HUD.
+- /alive demo boom: returns an unsupported message, rather than a fake HUD explosion.
 
 ## Build
 
-Source and CI target the Horizon v0.2.92 SDK API 0.1, compatible with Horizon v0.2.93. `cargo-horizon-mod` builds a WebAssembly component, checks imports versus the manifest, then runs its test sandbox.
+Run these commands in the repository directory:
 
-A **green GitHub Actions build** uploads `horizon-alive-0.4.0-hmod`. The archive holds `horizon_alive.hmod`. Do not rename the source ZIP to `.hmod`.
+    rustup target add wasm32-unknown-unknown
+    cargo install --git https://github.com/horizon-rust/horizon --tag v0.2.92 cargo-horizon-mod
+    cargo fmt --all --check
+    cargo test --all-targets
+    cargo clippy --all-targets -- -D warnings
+    cargo horizon-mod build
+    cargo horizon-mod test
+    cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
 
-```sh
-rustup target add wasm32-unknown-unknown
-cargo install --git https://github.com/horizon-rust/horizon --tag v0.2.92 cargo-horizon-mod
-cargo fmt --all --check
-cargo test --all-targets
-cargo clippy --all-targets -- -D warnings
-cargo horizon-mod build
-cargo horizon-mod test
-cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
-```
+After a successful GitHub Actions run, obtain horizon-alive-0.5.0-hmod and extract horizon_alive.hmod. Replace the old file in Horizon's horizon-mods directory and enable it in Options > Mods.
 
-Copy the `.hmod` to your Horizon game folder's `horizon-mods/` directory next to `options.txt`, then enable the mod in **Options > Mods**.
+## Native 3D integration is NOT complete
 
-## IMPORTANT: Horizon v0.2.93 Intel OpenGL crash
+The existing native source-mixin option builds a custom Horizon executable, NOT a .hmod. The official horizon-native-mod-template pins a different engine revision and cannot be applied unmodified to v0.2.93. It must be revision-pinned, compiled and tested separately. See docs/EXPLOSION_3D.md.
 
-If you see `Surface Texture ... required COPY_SRC`, see [docs/ENGINE_CRASH.md](docs/ENGINE_CRASH.md). This is a validation failure in the game's GPU command encoder; the `.hmod` cannot fix the swapchain permissions. A passing sandbox check is **not** a test of the Windows OpenGL renderer. For comparative diagnosis, test the same world **without the mod** and try `/alive graphics off` to disable HUD shapes, if the game can start.
-
-## Validation
-
-- Native Rust unit tests exercise simulation limits, lifecycle and configuration.
-- Horizon sandbox tests exercise commands, migration and reload.
-- GitHub CI builds and checks the `.hmod`, then uploads only after validation succeeds.
-- A real Windows/Intel UHD graphics test is still required to certify visual stability.
-
-See [docs/AUDIT.md](docs/AUDIT.md) for details.
+Passing .hmod sandbox checks does NOT mean that this new explosion appears in-world. It cannot until Horizon offers a world-space SDK hook or a separately validated native renderer is supplied.

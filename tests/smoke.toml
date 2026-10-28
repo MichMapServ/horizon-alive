@@ -1,66 +1,42 @@
-# Sandbox integration tests: no GPU or OpenGL surface is available here.
-
+# No fake HUD explosion: integration smoke checks for Horizon .hmod sandbox.
 [[step]]
-command = "alive off"
-expect.feedback = "Horizon Alive disabled"
-
-[[step]]
-command = "alive demo"
-expect.error = "Enable Horizon Alive with /alive on first"
-
-[[step]]
-reload = true
 command = "alive status"
-expect.feedback = "Alive: off; quality: balanced; motion: normal; HUD: on; particles: 0"
-
-[[step]]
-command = "alive on"
-expect.feedback = "Horizon Alive enabled"
-
-[[step]]
-command = "alive quality high"
-expect.feedback = "Horizon Alive quality: high"
-
-[[step]]
-command = "alive motion reduced"
-expect.feedback = "Horizon Alive camera motion: reduced"
-
-[[step]]
-command = "alive graphics off"
-expect.feedback = "Horizon Alive HUD renderer disabled (diagnostic mode)"
-
-[[step]]
-command = "alive demo water"
-expect.error = "Enable the HUD renderer with /alive graphics on first"
-
-[[step]]
-reload = true
-command = "alive status"
-expect.feedback = "Alive: on; quality: high; motion: reduced; HUD: off; particles: 0"
-
-[[step]]
-command = "alive graphics on"
-expect.feedback = "Horizon Alive HUD renderer enabled"
+expect.feedback = "Alive: on; quality: balanced; motion: normal; HUD particles: removed; 3D TNT: native required"
 
 [[step]]
 command = "alive demo boom"
-expect.feedback = "2D explosion preview"
+expect.error = "2D effects removed; .hmod cannot render world-space explosions"
 
 [[step]]
-ticks = 50
+command = "alive graphics off"
+expect.feedback = "HUD particle renderer permanently disabled"
 
 [[step]]
-command = "alive demo water"
-expect.feedback = "2D water ripple preview"
+command = "alive graphics on"
+expect.error = "2D effects removed; .hmod cannot render world-space explosions"
 
 [[step]]
-command = "alive demo punch"
-expect.feedback = "2D swing preview"
+command = "alive quality high"
+expect.feedback = "Target quality: high"
 
 [[step]]
-command = "alive demo fireflies"
-expect.feedback = "2D fireflies preview"
+command = "alive motion reduced"
+expect.feedback = "Camera motion preference: reduced"
 
 [[step]]
-command = "alive quality low"
-expect.feedback = "Horizon Alive quality: low"
+command = "alive off"
+expect.feedback = "Explosion preference disabled"
+
+[[step]]
+reload = true
+command = "alive status"
+expect.feedback = "Alive: off; quality: high; motion: reduced; HUD particles: removed; 3D TNT: native required"
+
+[[step]]
+command = "alive on"
+expect.feedback = "Explosion preference enabled; native 3D renderer required"
+
+[[step]]
+frames = 60
+ticks = 20
+expect.panel = []

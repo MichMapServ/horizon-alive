@@ -1,9 +1,9 @@
 [package]
 name = "horizon-alive"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 license = "MIT"
-description = "Safe, configurable screen-space visual effects for Horizon"
+description = "Horizon Alive: future world-space TNT explosion geometry and safe .hmod controls"
 publish = false
 
 [lib]
