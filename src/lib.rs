@@ -602,7 +602,7 @@ Tick estimé : {}",
             }
             "graphics off" => {
                 render::set_hud(&[]);
-                Ok(Some(success("Aucun effet HUD actif")))
+                Ok(Some(label("Aucun effet HUD actif")))
             }
             other => {
                 if let Some((key, value)) = other.split_once(' ') {
