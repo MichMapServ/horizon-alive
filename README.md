@@ -1,4 +1,4 @@
-# Horizon Alive WorldFX v0.6.0
+# Horizon Alive WorldFX v0.7.0
 
 **This is a real WebAssembly .hmod**, with code in Rust. The new world-space effects are generated using Horizon's verified vanilla `/particle` command implementation instead of the old HUD rectangle engine.
 
@@ -17,7 +17,7 @@ Enable Horizon Alive in Options > Mods. In a creative test world with commands e
 
 Command permissions are those of the player. If cheats are unavailable, `/alive tnt` can fail to summon TNT; the mod cannot discover that outcome and may still show the preview. Use `/alive preview` for a harmless test.
 
-**Limitation:** the v0.2.93 SDK does not expose native TNT explosion callbacks to client .hmods. Ordinary vanilla TNT explosions cannot be detected automatically. The effect only plays via `/alive preview` or `/alive tnt`.
+**Detection:** Horizon v0.2.93's `.hmod` API has no primed-TNT entity list or `prime_fuse` event. `/alive detect on` enables a **best-effort local inference**: aim at TNT with flint and steel or a fire charge, use the item, and keep aiming while the TNT block disappears. It reports a *probable* ignition in chat. This does not detect remote, redstone, explosion-chain, or offscreen priming and cannot confirm whether the server accepted the action. `/alive detect fx on` optionally schedules the existing WorldFX animation approximately 80 ticks later; it is OFF by default pending in-game tests. `/alive detect last` reports last observation. Normal gameplay remains unchanged.
 
 ## Safety
 
@@ -42,3 +42,12 @@ cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
 ```
 
 Horizon engine tag v0.2.93 has the verified command-side `/particle` implementation. CI does not replace an in-game Intel UHD / OpenGL visual test, and it does not fix the unrelated engine's `COPY_SRC` crash.
+
+## Ignition detector diagnostics
+
+- `/alive detect on` / `/alive detect off`: enable or disable the passive inference.
+- `/alive detect last`: show last inferred TNT position and estimated detonation tick.
+- `/alive detect fx on`: opt in to the **existing** 3D WorldFX at the estimated end of the 80-tick fuse. Approximation only; explosions can move or be shortened.
+- `/alive detect fx off`: continue detecting without spawning automatic visual effects (default).
+
+Reliable event-driven detection of arbitrary vanilla TNT (redstone, chain TNT, server spawned, offscreen) remains blocked by the SDK interface. See `docs/TNT_DETECTION.md`.
