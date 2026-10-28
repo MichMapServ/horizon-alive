@@ -1,50 +1,57 @@
-# Horizon Alive v0.8.0 — TNT pipeline
+# Horizon Alive v0.9.0 — suivi estimé de TNT
 
-Sandboxed Minecraft Horizon mod (.hmod) in Rust: the code uses vanilla particle commands with world XYZ positions, not fake HUD overlays.
+Mod WebAssembly **.hmod** écrit en Rust, sans overlay HUD. Les effets du projet WorldFX restent rendus via les commandes vanilla de particules aux coordonnées 3D du monde.
 
-**Confirmed SDK limitation:** API 0.1 exposes no primed-TNT entity list, no real TNT fuse and no event for priming/detonation. Full coverage of redstone, minecarts, chained TNT, remote TNT or offscreen TNT is impossible using this client-only .hmod. The detector recognises only a **probable local ignition** when the player aims at TNT and uses flint and steel or a fire charge, then the block disappears under a stable camera.
+## Ce que cette version améliore
 
-## What v0.8 fixes
+- Une TNT allumée manuellement et reconnue par le détecteur ne produit plus systématiquement une animation à la hauteur erronée **Y + 1** : la position initiale réelle de l'entité amorcée est le centre du bloc en X/Z, à **Y**.
+- Le nouveau module Rust `src/trajectory.rs` reproduit approximativement la gravité `-0.04`, le frottement `0.98` et le freinage au sol `0.7` de `PrimedTnt::tick` dans Horizon v0.2.93.
+- Au moment de la détonation **estimée**, l'animation WorldFX se déclenche à la position **prédite**, plus proche d'une TNT qui a légèrement sauté ou glissé.
+- `/alive tnt` attend désormais le fuse `1s` de sa TNT créée par commande avant de lancer l'animation, au lieu de la lancer immédiatement.
+- `/alive follow estimate` : position prédite, **activée par défaut**. `/alive follow fixed` : mode compatible, position fixe. Le réglage est sauvegardé.
+- Les journaux marquent toujours `DETONATION_ESTIMATE`, jamais une explosion moteur confirmée.
 
-- For new installs, detection and its **estimated** automatic particle animation default to ON. Existing stored OFF settings remain OFF.
-- One-line French chat messages and optional diagnostic logs distinguish actual mod startup, probable ignition, estimated detonation, queued particle commands and completion.
-- New /alive diag and /alive diag last commands expose counters and the last recorded stage.
-- Dimension changes and clock rewinds cancel temporary effects and reset pending detection.
-- Existing WorldFX /alive preview, /alive tnt, quality, scale, smoke and flash commands remain available.
-- Automatic detection **never spawns another gameplay explosion**.
+## Limitation technique impérative
 
-## Useful in-game commands
+**Ce n'est PAS un vrai suivi de TNT en mouvement, et ce mod ne détecte PAS toutes les TNT.**
 
-| Command | Result |
-| --- | --- |
-| /alive status | Current state, observation and active-effect count |
-| /alive diag | Diagnostic counters |
-| /alive diag last | Last pipeline stage |
-| /alive detect last | Last probable ignition position |
-| /alive detect on / off | Switch local detector on/off |
-| /alive detect fx on / off | Switch estimated animation on/off |
-| /alive debug on / off | Additional log messages about submitted vanilla particle commands |
-| /alive preview | Non-destructive XYZ particles at the aimed block |
-| /alive tnt | Requests a single vanilla TNT; requires normal command permissions |
-| /alive quality low / balanced / high | Quality profile |
-| /alive scale 0.5..2.0 | Visual size |
-| /alive smoke on / off | Smoke toggle |
-| /alive flash on / off | Flash toggle |
+Dans Horizon v0.2.93, le SDK .hmod API 0.1 ne donne ni l'identifiant, ni la position actuelle, ni la vitesse, ni le fuse réel, ni l'événement de détonation des entités TNT. Les commandes `@e[type=tnt]` ne peuvent pas cibler la collection `Game::tnts` en solo. Les événements redstone, chaînes TNT, explosions distantes et TNT minecart sont donc toujours inaccessibles de façon fiable.
 
-## Build
+La direction horizontale réelle est issue d'un générateur aléatoire interne du moteur, **inconnu du mod**. Le simulateur utilise un angle déterministe local **qui ne correspond pas nécessairement** à cet angle. Ses hypothèses de plancher ne remplacent pas les collisions, fluides et impulsions de gameplay. Le décalage augmente dans ces cas. Il est donc interdit de qualifier cette approximation de suivi exact.
 
-On GitHub Actions, the .hmod is published only after Rust unit tests, cargo check, strict Clippy, cargo horizon-mod build/test/check and package verification pass. The SDK is pinned to Horizon tag v0.2.92; the renderer/engine audit refers to v0.2.93.
+Les TNT ordinaires amorcées au briquet/charge peuvent uniquement être **inférées** lorsque le joueur vise le bloc puis le voit disparaître. Une détonation réelle ne peut pas être vérifiée. Le rendu via `command::run_quiet` ne fournit aucune confirmation d'affichage et requiert les droits de commande habituels.
 
-    rustup target add wasm32-unknown-unknown
-    cargo install --git https://github.com/horizon-rust/horizon --tag v0.2.92 cargo-horizon-mod
-    cargo fmt --all --check
-    cargo check --all-targets
-    cargo test --all-targets
-    cargo clippy --all-targets -- -D warnings
-    cargo horizon-mod build
-    cargo horizon-mod test
-    cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
+## Vérification rapide
 
-Install horizon_alive.hmod inside horizon-mods next to options.txt. Remove duplicate older copies and enable the mod in Options > Mods. Test in a disposable world with command permissions. Command submission is not proof of visual rendering because command::run_quiet returns no acknowledgement.
+En monde de test avec les commandes autorisées :
 
-See [TNT pipeline audit and TNT-01–TNT-15 matrix](docs/TNT_AUDIT_V080.md) and [v0.2.93 engine crash diagnosis](docs/ENGINE_CRASH.md).
+```text
+/alive follow estimate
+/alive detect fx on
+/alive debug on
+/alive status
+/alive preview
+/alive diag
+```
+
+Pour comparer la position de l'animation :
+
+```text
+/alive follow fixed
+```
+
+## Build reproductible
+
+SDK épinglé à Horizon `v0.2.92`, code moteur audité sur `v0.2.93`. CI : `cargo check --all-targets`, tests Rust, Clippy strict, `cargo horizon-mod build`, `cargo horizon-mod test`, `cargo horizon-mod check`. Le fichier final se nomme `horizon_alive.hmod` dans l'artefact du workflow.
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install --git https://github.com/horizon-rust/horizon --tag v0.2.92 cargo-horizon-mod
+cargo test --all-targets
+cargo clippy --all-targets -- -D warnings
+cargo horizon-mod build
+cargo horizon-mod test
+cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
+```
+
+Pour les déclencheurs réellement pris en charge, voir [l'audit TNT précédent](docs/TNT_AUDIT_V080.md). Un suivi **réel et universel** nécessiterait une extension officielle de l'API du moteur, livrant les événements `tnt-primed`, `tnt-position`, `tnt-detonated`, avec identifiant et dimension. Le fichier .hmod seul ne peut pas ajouter ces fonctions au moteur existant.
