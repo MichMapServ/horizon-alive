@@ -12,6 +12,22 @@ pub enum Quality { Low, Balanced, High }
 impl Quality {
     pub fn from_byte(v: u8) -> Self { match v { 0 => Self::Low, 2 => Self::High, _ => Self::Balanced } }
     pub fn as_byte(self) -> u8 { match self { Self::Low => 0, Self::Balanced => 1, Self::High => 2 } }
+    pub fn next(self) -> Self { match self { Self::Low => Self::Balanced, Self::Balanced => Self::High, Self::High => Self::Low } }
+    fn ring(self) -> usize { match self { Self::Low => 8, Self::Balanced => 15, Self::High => 20 } }
+    fn fire(self) -> usize { match self { Self::Low => 5, Self::Balanced => 9, Self::High => 13 } }
+    fn smoke(self) -> usize { match self { Self::Low => 2, Self::Balanced => 4, Self::High => 6 } }
+}
+
+#[derive(Clone, Debug)]
+pub struct Config { pub quality: Quality, pub scale: f64, pub flash: bool, pub smoke: bool }
+impl Default for Config {
+    fn default() -> Self { Self { quality: Quality::Balanced, scale: 1.0, flash: true, smoke: true } }
+}
+impl Config {
+    pub fn validated(mut self) -> Self {
+        self.scale = if self.scale.is_finite() { self.scale.clamp(0.5, 2.0) } else { 1.0 };
+        self
+    }
 }
 
 #[derive(Clone, Debug)]
