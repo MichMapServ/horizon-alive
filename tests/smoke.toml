@@ -1,7 +1,7 @@
 # Sandbox exercises commands and persistence; it cannot render a real GPU view.
 [[step]]
 command = "alive status"
-expect.feedback = "Alive v0.6: on; balanced quality; 1.0x; 0 effects; vanilla TNT not tracked"
+expect.feedback = "Alive v0.7: on; balanced quality; 1.0x; 0 effects; detector: on; likely ignitions: 0; auto FX: off"
 
 [[step]]
 command = "alive quality low"
@@ -22,8 +22,29 @@ expect.feedback = "Horizon Alive disabled"
 [[step]]
 reload = true
 command = "alive status"
-expect.feedback = "Alive v0.6: off; low quality; 1.0x; 0 effects; vanilla TNT not tracked"
+expect.feedback = "Alive v0.7: off; low quality; 1.0x; 0 effects; detector: on; likely ignitions: 0; auto FX: off"
 
 [[step]]
 command = "alive on"
 expect.feedback = "Horizon Alive enabled"
+
+[[step]]
+command = "alive detect last"
+expect.feedback = "No likely TNT ignition observed yet"
+
+[[step]]
+command = "alive detect off"
+expect.feedback = "Local TNT ignition detector disabled"
+
+[[step]]
+command = "alive detect fx on"
+expect.feedback = "Estimated TNT visual animation enabled (80 tick fuse, unconfirmed)"
+
+[[step]]
+command = "alive detect fx off"
+expect.feedback = "Automatic TNT animation disabled; detection still active"
+
+[[step]]
+reload = true
+command = "alive status"
+expect.feedback = "Alive v0.7: on; low quality; 1.0x; 0 effects; detector: on; likely ignitions: 0; auto FX: off"
