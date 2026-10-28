@@ -1,7 +1,7 @@
 id = "horizon_alive"
 name = "Horizon Alive"
-version = "0.7.0"
-description = "3D WorldFX and local flint-steel TNT ignition detection"
+version = "0.8.0"
+description = "Local TNT ignition inference and 3D WorldFX with honest pipeline diagnostics"
 authors = ["Horizon Alive contributors"]
 api = "0.1"
 side = "client"
