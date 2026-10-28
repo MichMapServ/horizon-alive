@@ -1,42 +1,29 @@
-# No fake HUD explosion: integration smoke checks for Horizon .hmod sandbox.
+# Sandbox exercises commands and persistence; it cannot render a real GPU view.
 [[step]]
 command = "alive status"
-expect.feedback = "Alive: on; quality: balanced; motion: normal; HUD particles: removed; 3D TNT: native required"
+expect.feedback = "Alive v0.6: on; balanced quality; 1.0x; 0 effects; vanilla TNT not tracked"
 
 [[step]]
-command = "alive demo boom"
-expect.error = "2D effects removed; .hmod cannot render world-space explosions"
+command = "alive quality low"
+expect.feedback = "Horizon Alive settings saved"
 
 [[step]]
-command = "alive graphics off"
-expect.feedback = "HUD particle renderer permanently disabled"
+command = "alive smoke off"
+expect.feedback = "Horizon Alive settings saved"
 
 [[step]]
-command = "alive graphics on"
-expect.error = "2D effects removed; .hmod cannot render world-space explosions"
-
-[[step]]
-command = "alive quality high"
-expect.feedback = "Target quality: high"
-
-[[step]]
-command = "alive motion reduced"
-expect.feedback = "Camera motion preference: reduced"
+command = "alive flash off"
+expect.feedback = "Horizon Alive settings saved"
 
 [[step]]
 command = "alive off"
-expect.feedback = "Explosion preference disabled"
+expect.feedback = "Horizon Alive disabled"
 
 [[step]]
 reload = true
 command = "alive status"
-expect.feedback = "Alive: off; quality: high; motion: reduced; HUD particles: removed; 3D TNT: native required"
+expect.feedback = "Alive v0.6: off; low quality; 1.0x; 0 effects; vanilla TNT not tracked"
 
 [[step]]
 command = "alive on"
-expect.feedback = "Explosion preference enabled; native 3D renderer required"
-
-[[step]]
-frames = 60
-ticks = 20
-expect.panel = []
+expect.feedback = "Horizon Alive enabled"

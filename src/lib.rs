@@ -1,240 +1,188 @@
-//! Horizon Alive v0.5: safe WebAssembly control mod.
-//!
-//! The unwanted 2D HUD particles have been removed. Horizon 0.1 does not
-//! expose world-space geometry or TNT explosion events to .hmod code.
-//! The pure Rust world-space explosion model lives in explosion3d.rs; a
-//! version-pinned native renderer is required to display its geometry.
-pub mod explosion3d;
+//! Horizon Alive WorldFX 0.6.0: real XYZ vanilla particle commands, never HUD.
+//! SDK 0.1 cannot observe other TNT explosions. Only /alive tnt instruments TNT.
+mod worldfx;
 
-use horizon_mod_sdk::{Mod, Registration, log, render, storage, ui};
+use horizon_mod_sdk::{Mod, Registration, command, game, log, render, storage, ui};
+use worldfx::{Blast, Config, Quality, COOLDOWN_TICKS, LIFE_TICKS, MAX_ACTIVE};
 
-const ENABLED_KEY: &str = "alive.enabled";
-const QUALITY_KEY: &str = "alive.quality";
-const MOTION_KEY: &str = "alive.reduced_motion";
-// Retain the legacy setting but never draw the old HUD particle shapes.
-const GRAPHICS_KEY: &str = "alive.graphics";
+const ENABLED: &str = "alive.enabled";
+const QUALITY: &str = "alive.quality";
+const SCALE: &str = "alive.scale";
+const FLASH: &str = "alive.flash";
+const SMOKE: &str = "alive.smoke";
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Quality {
-    Low,
-    Balanced,
-    High,
+fn stored(key: &str, default: u8) -> u8 {
+    storage::get(key).and_then(|v| v.first().copied()).unwrap_or(default)
 }
-
-impl Quality {
-    fn from_byte(value: u8) -> Self {
-        match value {
-            0 => Self::Low,
-            2 => Self::High,
-            _ => Self::Balanced,
-        }
-    }
-    fn as_byte(self) -> u8 {
-        match self {
-            Self::Low => 0,
-            Self::Balanced => 1,
-            Self::High => 2,
-        }
-    }
-    fn name(self) -> &'static str {
-        match self {
-            Self::Low => "low",
-            Self::Balanced => "balanced",
-            Self::High => "high",
-        }
-    }
-    fn next(self) -> Self {
-        match self {
-            Self::Low => Self::Balanced,
-            Self::Balanced => Self::High,
-            Self::High => Self::Low,
-        }
-    }
-}
-
-fn setting(key: &str, default: bool) -> bool {
-    storage::get(key)
-        .and_then(|data| data.first().copied())
-        .map(|byte| byte != 0)
-        .unwrap_or(default)
-}
-
-fn store(key: &str, value: u8) {
-    if let Err(err) = storage::set(key, &[value]) {
-        log::write(log::Level::Warn, &format!("Horizon Alive storage: {err}"));
+fn save(key: &str, v: u8) {
+    if let Err(e) = storage::set(key, &[v]) {
+        log::write(log::Level::Warn, &format!("Horizon Alive: saving settings failed: {e}"));
     }
 }
 
 struct Alive {
     enabled: bool,
-    quality: Quality,
-    reduced_motion: bool,
+    config: Config,
+    active: Vec<Blast>,
+    last_trigger: Option<u64>,
+    last_tick: Option<u64>,
+    dimension: Option<String>,
 }
-
 impl Alive {
-    fn new() -> Self {
-        // Preserve settings from the previous .hmod releases.
-        let quality = storage::get(QUALITY_KEY)
-            .and_then(|data| data.first().copied())
-            .map(Quality::from_byte)
-            .unwrap_or(Quality::Balanced);
+    fn load() -> Self {
         Self {
-            enabled: setting(ENABLED_KEY, true),
-            quality,
-            reduced_motion: setting(MOTION_KEY, false),
+            enabled: stored(ENABLED,1) != 0,
+            config: Config {
+                quality: Quality::from_byte(stored(QUALITY,1)),
+                scale: f64::from(stored(SCALE,10).clamp(5,20))/10.0,
+                flash: stored(FLASH,1) != 0,
+                smoke: stored(SMOKE,1) != 0,
+            },
+            active: Vec::with_capacity(MAX_ACTIVE),
+            last_trigger: None,
+            last_tick: None,
+            dimension: None,
         }
     }
-
     fn settings(&self) {
         ui::set_settings(&[
             ui::Widget::Text(ui::TextWidget {
-                id: 10,
-                text: "HUD particles removed. 3D TNT requires native engine support.".into(),
-                color: 0xBED6DD,
+                id:10,
+                text:"Vanilla 3D world particles. /alive tnt requires cheats. Ordinary TNT is unchanged.".into(),
+                color:0xBDDDE8,
             }),
-            ui::Widget::Button(ui::ButtonWidget {
-                id: 1,
-                label: format!("Explosion preference: {}", if self.enabled { "ON" } else { "OFF" }),
-            }),
-            ui::Widget::Button(ui::ButtonWidget {
-                id: 2,
-                label: format!("Target quality: {}", self.quality.name()),
-            }),
-            ui::Widget::Button(ui::ButtonWidget {
-                id: 3,
-                label: format!(
-                    "Camera motion preference: {}",
-                    if self.reduced_motion { "reduced" } else { "normal" },
-                ),
-            }),
+            ui::Widget::Button(ui::ButtonWidget{id:1,label:format!("World FX: {}",if self.enabled {"ON"} else {"OFF"})}),
+            ui::Widget::Button(ui::ButtonWidget{id:2,label:format!("Quality: {}",self.config.quality.name())}),
+            ui::Widget::Button(ui::ButtonWidget{id:3,label:format!("Visual scale: {:.1}x",self.config.scale)}),
+            ui::Widget::Button(ui::ButtonWidget{id:4,label:format!("Smoke: {}",if self.config.smoke {"ON"}else{"OFF"})}),
+            ui::Widget::Button(ui::ButtonWidget{id:5,label:format!("Flash: {}",if self.config.flash {"ON"}else{"OFF"})}),
         ]);
     }
-
-    fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
-        store(ENABLED_KEY, u8::from(enabled));
-        self.settings();
+    fn status(&self)->String {
+        format!("Alive v0.6: {}; {} quality; {:.1}x; {} effects; vanilla TNT not tracked",
+            if self.enabled{"on"}else{"off"},self.config.quality.name(),self.config.scale,self.active.len())
     }
-
-    fn set_quality(&mut self, quality: Quality) {
-        self.quality = quality;
-        store(QUALITY_KEY, quality.as_byte());
-        self.settings();
+    fn begin(&mut self, with_tnt:bool)->Result<Option<String>,String> {
+        if !self.enabled {return Err("Enable with /alive on".into());}
+        let player=game::get_player().ok_or("Open a world first")?;
+        let clock=game::get_clock().ok_or("World clock unavailable")?;
+        if self.last_trigger.is_some_and(|last|clock.game_time>=last&&clock.game_time-last<COOLDOWN_TICKS){
+            return Err("Cooldown active; try again shortly".into());
+        }
+        let hit=game::raycast(12.0).ok_or("Aim at a block within 12 blocks")?;
+        let origin=worldfx::anchor_from_block(hit.block_x,hit.block_y,hit.block_z);
+        if with_tnt {
+            let cmd=worldfx::summon_tnt(origin).ok_or("Invalid coordinates")?;
+            // One TNT only. Command runs as the player with standard permissions.
+            // A world with cheats disabled refuses the request; no privileges bypassed.
+            command::run(&cmd);
+        }
+        if self.active.len()>=MAX_ACTIVE {self.active.remove(0);}
+        self.active.push(Blast{
+            origin,
+            start_tick:clock.game_time,
+            dimension:player.dimension.clone(),
+            seed:clock.game_time^origin[0].to_bits()^origin[2].to_bits(),
+        });
+        self.last_trigger=Some(clock.game_time);
+        self.dimension=Some(player.dimension);
+        Ok(Some(if with_tnt {
+            "Requested one vanilla TNT and its 3D world-space effect (cheats required).".into()
+        } else {
+            "3D world-space visual preview, no explosion damage.".into()
+        }))
     }
-
-    fn set_reduced_motion(&mut self, reduced: bool) {
-        self.reduced_motion = reduced;
-        store(MOTION_KEY, u8::from(reduced));
+    fn configure(&mut self,key:&str,value:&str)->Result<Option<String>,String>{
+        match key {
+            "quality"=>{
+                self.config.quality=match value {
+                    "low"=>Quality::Low,"balanced"=>Quality::Balanced,"high"=>Quality::High,
+                    _=>return Err("Use /alive quality low|balanced|high".into()),
+                };
+                save(QUALITY,self.config.quality.as_byte());
+            }
+            "scale"=>{
+                let v:f64=value.parse().map_err(|_|"Use /alive scale 0.5..2.0")?;
+                if !v.is_finite() || !(0.5..=2.0).contains(&v) {
+                    return Err("Use /alive scale 0.5..2.0".into());
+                }
+                self.config.scale=(v*10.0).round()/10.0;
+                save(SCALE,(self.config.scale*10.0) as u8);
+            }
+            "smoke"=>{
+                self.config.smoke=match value {"on"=>true,"off"=>false,_=>return Err("Use /alive smoke on|off".into())};
+                save(SMOKE,u8::from(self.config.smoke));
+            }
+            "flash"=>{
+                self.config.flash=match value {"on"=>true,"off"=>false,_=>return Err("Use /alive flash on|off".into())};
+                save(FLASH,u8::from(self.config.flash));
+            }
+            _=>return Err("Unknown setting".into()),
+        };
         self.settings();
-    }
-
-    fn status(&self) -> String {
-        format!(
-            "Alive: {}; quality: {}; motion: {}; HUD particles: removed; 3D TNT: native required",
-            if self.enabled { "on" } else { "off" },
-            self.quality.name(),
-            if self.reduced_motion { "reduced" } else { "normal" },
-        )
+        Ok(Some("Horizon Alive settings saved".into()))
     }
 }
-
 impl Mod for Alive {
-    fn init() -> Result<(Self, Registration), String> {
-        // The v0.4.x HUD is retained by the engine; ensure it is empty on reload.
+    fn init()->Result<(Self,Registration),String>{
         render::set_hud(&[]);
-        let previous = setting(GRAPHICS_KEY, true);
-        if previous {
-            log::write(
-                log::Level::Info,
-                "Legacy HUD visuals have been retired; stored preferences are preserved",
-            );
-        }
-        log::write(
-            log::Level::Info,
-            "Horizon Alive v0.5: no screen-space particles; 3D renderer not exposed by .hmod",
-        );
-        // No tick or frame hook: a passive control mod cannot affect FPS.
-        Ok((Self::new(), Registration::new().command("alive")))
+        log::write(log::Level::Info,"Horizon Alive 0.6: vanilla world-space effects ready");
+        Ok((Self::load(),Registration::new().command("alive").on_tick()))
     }
-
-    fn command(&mut self, name: &str, args: &str) -> Result<Option<String>, String> {
-        if name != "alive" {
-            return Err("Unknown command".into());
+    fn tick(&mut self,tick:u64){
+        if self.last_tick==Some(tick){return;}
+        self.last_tick=Some(tick);
+        let Some(player)=game::get_player() else {
+            self.active.clear();self.dimension=None;self.last_trigger=None;return;
+        };
+        let Some(clock)=game::get_clock() else {self.active.clear();return;};
+        if self.dimension.as_deref()!=Some(player.dimension.as_str())
+            || self.active.iter().any(|e|e.start_tick>clock.game_time){
+            self.active.clear();self.last_trigger=None;
         }
-        match args.trim() {
-            "" | "help" => Ok(Some(
-                "/alive status|on|off|quality low|balanced|high|motion reduced|normal".into(),
-            )),
-            "status" => Ok(Some(self.status())),
-            "on" => {
-                self.set_enabled(true);
-                Ok(Some("Explosion preference enabled; native 3D renderer required".into()))
+        self.dimension=Some(player.dimension.clone());
+        if !self.enabled {self.active.clear();return;}
+        self.active.retain(|b|b.dimension==player.dimension
+            && clock.game_time>=b.start_tick
+            && clock.game_time-b.start_tick<LIFE_TICKS);
+        let frames:Vec<_>=self.active.iter().map(|b|worldfx::frame(b,clock.game_time-b.start_tick,&self.config)).collect();
+        let commands=worldfx::interleave(&frames);
+        if !commands.is_empty(){command::run_quiet(&commands);}
+    }
+    fn command(&mut self,name:&str,args:&str)->Result<Option<String>,String>{
+        if name!="alive"{return Err("Unknown command".into());}
+        match args.trim(){
+            ""|"help"=>Ok(Some("/alive tnt|preview|status|on|off|quality low|balanced|high|scale 0.5..2.0|smoke on|off|flash on|off".into())),
+            "status"=>Ok(Some(self.status())),
+            "on"=>{self.enabled=true;save(ENABLED,1);self.settings();Ok(Some("Horizon Alive enabled".into()))}
+            "off"=>{self.enabled=false;self.active.clear();save(ENABLED,0);self.settings();Ok(Some("Horizon Alive disabled".into()))}
+            "tnt"=>self.begin(true),
+            "preview"=>self.begin(false),
+            "graphics off"=>{render::set_hud(&[]);Ok(Some("Horizon Alive HUD is empty".into()))}
+            other=>{
+                if let Some((k,v))=other.split_once(' '){self.configure(k,v)}
+                else {Err("Use /alive help".into())}
             }
-            "off" => {
-                self.set_enabled(false);
-                Ok(Some("Explosion preference disabled".into()))
-            }
-            "quality low" => {
-                self.set_quality(Quality::Low);
-                Ok(Some("Target quality: low".into()))
-            }
-            "quality balanced" => {
-                self.set_quality(Quality::Balanced);
-                Ok(Some("Target quality: balanced".into()))
-            }
-            "quality high" => {
-                self.set_quality(Quality::High);
-                Ok(Some("Target quality: high".into()))
-            }
-            "motion reduced" => {
-                self.set_reduced_motion(true);
-                Ok(Some("Camera motion preference: reduced".into()))
-            }
-            "motion normal" => {
-                self.set_reduced_motion(false);
-                Ok(Some("Camera motion preference: normal".into()))
-            }
-            "demo" | "demo boom" | "demo water" | "demo fireflies" | "demo punch" | "graphics on" => {
-                Err("2D effects removed; .hmod cannot render world-space explosions".into())
-            }
-            "graphics off" => {
-                render::set_hud(&[]);
-                Ok(Some("HUD particle renderer permanently disabled".into()))
-            }
-            _ => Err("Use /alive help".into()),
         }
     }
-
-    fn ui_settings_opened(&mut self) {
+    fn ui_settings_opened(&mut self){self.settings();}
+    fn ui_select(&mut self,id:u32,_row:u32){
+        match id{
+            1=>{self.enabled=!self.enabled;if !self.enabled{self.active.clear();}save(ENABLED,u8::from(self.enabled));}
+            2=>{self.config.quality=self.config.quality.next();save(QUALITY,self.config.quality.as_byte());}
+            3=>{self.config.scale=if self.config.scale>=2.0{0.5}else{(self.config.scale+0.5).min(2.0)};save(SCALE,(self.config.scale*10.0) as u8);}
+            4=>{self.config.smoke=!self.config.smoke;save(SMOKE,u8::from(self.config.smoke));}
+            5=>{self.config.flash=!self.config.flash;save(FLASH,u8::from(self.config.flash));}
+            _=>return,
+        }
         self.settings();
     }
-
-    fn ui_select(&mut self, id: u32, _row: u32) {
-        match id {
-            1 => self.set_enabled(!self.enabled),
-            2 => self.set_quality(self.quality.next()),
-            3 => self.set_reduced_motion(!self.reduced_motion),
-            _ => {}
-        }
-    }
 }
-
 horizon_mod_sdk::export_mod!(Alive);
 
 #[cfg(test)]
 mod tests {
-    use super::Quality;
-
-    #[test]
-    fn quality_compatibility() {
-        assert_eq!(Quality::from_byte(0), Quality::Low);
-        assert_eq!(Quality::from_byte(1), Quality::Balanced);
-        assert_eq!(Quality::from_byte(2), Quality::High);
-        assert_eq!(Quality::from_byte(255), Quality::Balanced);
-    }
-
-    #[test]
-    fn quality_cycle_is_reversible() {
-        assert_eq!(Quality::Low.next().next().next(), Quality::Low);
-    }
+    use super::*;
+    #[test] fn quality_rotation(){assert_eq!(Quality::High.next(),Quality::Low);}
+    #[test] fn stored_scale_bounds(){assert!((5..=20).contains(&10_u8.clamp(5,20)));}
 }
