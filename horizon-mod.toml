@@ -1,9 +1,9 @@
 id = "horizon_alive"
 name = "Horizon Alive"
-version = "0.6.0"
-description = "Opt-in 3D world-space particles using vanilla commands; no HUD overlays"
+version = "0.7.0"
+description = "3D WorldFX and local flint-steel TNT ignition detection"
 authors = ["Horizon Alive contributors"]
 api = "0.1"
 side = "client"
-capabilities = ["game-read", "command", "render", "ui", "storage"]
-experimental = ["render", "ui"]
+capabilities = ["game-read", "input", "chat", "command", "render", "ui", "storage"]
+experimental = ["render", "ui", "input"]

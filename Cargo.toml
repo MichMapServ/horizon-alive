@@ -1,9 +1,9 @@
 [package]
 name = "horizon-alive"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2024"
 license = "MIT"
-description = "Opt-in XYZ TNT visual effects for Horizon, powered by vanilla particle commands"
+description = "WorldFX and conservative local TNT ignition detection for Horizon"
 publish = false
 
 [lib]
