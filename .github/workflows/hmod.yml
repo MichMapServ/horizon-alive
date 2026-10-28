@@ -1,7 +1,7 @@
-name: Build Horizon Alive hmod
+name: Build Horizon Alive WorldFX .hmod
 on:
   push:
-    branches: [main]
+    branches: [main, "feat/**"]
   pull_request:
   workflow_dispatch:
 
@@ -21,19 +21,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install Horizon packaging tool
         run: cargo install --git https://github.com/horizon-rust/horizon --tag v0.2.92 cargo-horizon-mod
-      - name: Apply rustfmt in build workspace
+      - name: Format source in build workspace
         run: |
           cargo fmt --all
           cargo fmt --all --check
-      - name: Unit tests for 3D explosion simulation and controls
+      - name: Rust tests
         run: cargo test --all-targets
-      - name: Clippy strict warnings
+      - name: Clippy strict
         run: cargo clippy --all-targets -- -D warnings
-      - name: Build .hmod
+      - name: Build hmod
         run: cargo horizon-mod build
-      - name: Sandbox integration and persistence
+      - name: Sandbox integration tests
         run: cargo horizon-mod test
-      - name: Validate sandbox imports and hooks
+      - name: Validate hmod
         run: cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
       - name: Verify artifact
         run: |
@@ -41,6 +41,6 @@ jobs:
           sha256sum target/horizon-mod/horizon_alive.hmod
       - uses: actions/upload-artifact@v4
         with:
-          name: horizon-alive-0.5.0-hmod
+          name: horizon-alive-0.6.0-worldfx-hmod
           path: target/horizon-mod/horizon_alive.hmod
           if-no-files-found: error
