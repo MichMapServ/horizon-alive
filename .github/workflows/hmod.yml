@@ -21,24 +21,24 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install Horizon packaging tool
         run: cargo install --git https://github.com/horizon-rust/horizon --tag v0.2.92 cargo-horizon-mod
-      - name: Formatting
-        run: |
-          cargo fmt --all
-          cargo fmt --all --check
-      - name: Rust tests
+      - name: Format (check, do not silently change source)
+        run: cargo fmt --all --check
+      - name: Unit tests: 3D explosion simulation and controls
         run: cargo test --all-targets
-      - name: Clippy
+      - name: Clippy: strict warnings
         run: cargo clippy --all-targets -- -D warnings
       - name: Build .hmod
         run: cargo horizon-mod build
-      - name: Exercise commands and reload in Horizon sandbox
+      - name: Sandbox integration and persistence
         run: cargo horizon-mod test
-      - name: Verify .hmod sandbox
+      - name: Validate sandbox imports and hooks
         run: cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
-      - name: Package integrity
-        run: test -s target/horizon-mod/horizon_alive.hmod && sha256sum target/horizon-mod/horizon_alive.hmod
+      - name: Verify artifact
+        run: |
+          test -s target/horizon-mod/horizon_alive.hmod
+          sha256sum target/horizon-mod/horizon_alive.hmod
       - uses: actions/upload-artifact@v4
         with:
-          name: horizon-alive-0.4.0-hmod
+          name: horizon-alive-0.5.0-hmod
           path: target/horizon-mod/horizon_alive.hmod
           if-no-files-found: error
