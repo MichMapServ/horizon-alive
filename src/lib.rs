@@ -4,10 +4,12 @@
 //! ignitions are labelled as estimates, not confirmed engine TNT events.
 mod detector;
 mod diagnostics;
+mod trajectory;
 mod worldfx;
 
 use detector::{Detector, Observation};
 use diagnostics::{Diagnostics, label, point};
+use trajectory::TntMotion;
 use horizon_mod_sdk::{Mod, Registration, chat, command, game, input, log, render, storage, ui};
 use worldfx::{Blast, Config, Quality, COOLDOWN_TICKS, LIFE_TICKS, MAX_ACTIVE};
 
@@ -19,6 +21,7 @@ const SMOKE: &str = "alive.smoke";
 const DETECTION: &str = "alive.detect";
 const AUTO_FX: &str = "alive.auto_fx";
 const DEBUG: &str = "alive.debug";
+const FOLLOW: &str = "alive.follow";
 const MAX_SCHEDULED: usize = 8;
 
 fn stored(key: &str, default: u8) -> u8 {
@@ -43,6 +46,8 @@ struct Scheduled {
     dimension: String,
     estimated_tick: u64,
     seed: u64,
+    observed_tick: u64,
+    motion: TntMotion,
 }
 
 struct Alive {
@@ -57,6 +62,7 @@ struct Alive {
     detection_enabled: bool,
     automatic_visuals: bool,
     debug: bool,
+    estimated_follow: bool,
     scheduled: Vec<Scheduled>,
     diag: Diagnostics,
 }
@@ -81,6 +87,7 @@ impl Alive {
             // OFF remains OFF if the player intentionally disabled it in v0.7.
             automatic_visuals: stored(AUTO_FX, 1) != 0,
             debug: stored(DEBUG, 0) != 0,
+            estimated_follow: stored(FOLLOW, 1) != 0,
             scheduled: Vec::with_capacity(MAX_SCHEDULED),
             diag: Diagnostics::default(),
         }
@@ -141,18 +148,23 @@ impl Alive {
                 id: 8,
                 label: format!("Logs detailles: {}", if self.debug { "ON" } else { "OFF" }),
             }),
+            ui::Widget::Button(ui::ButtonWidget {
+                id: 9,
+                label: format!("Position prevue: {}", if self.estimated_follow { "ON (approx.)" } else { "OFF (fixe)" }),
+            }),
         ]);
     }
 
     fn status(&self) -> String {
         label(&format!(
-            "v0.8 | {} | detection {} | animation estimee {} | {} effets | {} attentes | {} observations",
+            "v0.9 | {} | detection {} | animation estimee {} | {} effets | {} attentes | {} observations | suivi {}",
             if self.enabled { "actif" } else { "inactif" },
             if self.detection_enabled { "ON" } else { "OFF" },
             if self.automatic_visuals { "ON" } else { "OFF" },
             self.active.len(),
             self.scheduled.len(),
-            self.diag.candidates
+            self.diag.candidates,
+            if self.estimated_follow { "approx." } else { "fixe" }
         ))
     }
 
@@ -189,26 +201,35 @@ impl Alive {
                 event.dimension
             ));
             if self.automatic_visuals {
-                let origin = worldfx::anchor_from_block(
-                    event.pos[0], event.pos[1], event.pos[2]
-                );
-                if self.scheduled.len() == MAX_SCHEDULED {
-                    self.scheduled.remove(0);
-                    self.diag.cancelled = self.diag.cancelled.saturating_add(1);
-                    self.trace("DROPPED", "scheduled queue capacity reached");
+                // Actual PrimedTnt is spawned at the block's bottom center.
+                // The old origin used block_y + 1, producing a 1-block error.
+                let origin = [
+                    f64::from(event.pos[0]) + 0.5,
+                    f64::from(event.pos[1]),
+                    f64::from(event.pos[2]) + 0.5,
+                ];
+                let seed = tick ^ origin[0].to_bits() ^ origin[2].to_bits() ^ event_id;
+                if let Some(motion) = TntMotion::new(origin, Some(origin[1]), seed) {
+                    if self.scheduled.len() == MAX_SCHEDULED {
+                        self.scheduled.remove(0);
+                        self.diag.cancelled = self.diag.cancelled.saturating_add(1);
+                        self.trace("DROPPED", "scheduled queue capacity reached");
+                    }
+                    self.scheduled.push(Scheduled {
+                        observation: event_id,
+                        origin,
+                        dimension: event.dimension,
+                        estimated_tick: event.estimated_detonation_tick,
+                        observed_tick: tick,
+                        seed,
+                        motion,
+                    });
+                    self.diag.scheduled = self.diag.scheduled.saturating_add(1);
+                    self.trace("SCHEDULED", &format!(
+                        "observation #{event_id}; estimated tick {}; approximate physics, not observed entity coordinates",
+                        event.estimated_detonation_tick
+                    ));
                 }
-                self.scheduled.push(Scheduled {
-                    observation: event_id,
-                    origin,
-                    dimension: event.dimension,
-                    estimated_tick: event.estimated_detonation_tick,
-                    seed: tick ^ origin[0].to_bits() ^ origin[2].to_bits() ^ event_id,
-                });
-                self.diag.scheduled = self.diag.scheduled.saturating_add(1);
-                self.trace("SCHEDULED", &format!(
-                    "observation #{event_id}; estimated tick {}",
-                    event.estimated_detonation_tick
-                ));
             } else if self.debug {
                 self.trace("IGNORED", "auto FX is disabled by stored user preference");
             }
@@ -240,12 +261,20 @@ impl Alive {
                 self.diag.cancelled = self.diag.cancelled.saturating_add(1);
             }
             self.diag.started = self.diag.started.saturating_add(1);
+            let position = if self.estimated_follow {
+                event.motion.sample(tick.saturating_sub(event.observed_tick)).position
+            } else {
+                event.origin
+            };
+            // Center of the explosion sits a little above the TNT entity feet.
+            let center = [position[0], position[1] + 0.06125, position[2]];
             self.trace("DETONATION_ESTIMATE", &format!(
-                "observation #{}; at tick {tick}; position {:.2} {:.2} {:.2} (NOT confirmed)",
-                event.observation, event.origin[0], event.origin[1], event.origin[2]
+                "observation #{}; at tick {tick}; estimated XYZ {:.2} {:.2} {:.2}; trajectory {} (NOT a tracked TNT)",
+                event.observation, center[0], center[1], center[2],
+                if self.estimated_follow { "predicted" } else { "fixed" }
             ));
             self.active.push(Blast {
-                origin: event.origin,
+                origin: center,
                 dimension: event.dimension,
                 start_tick: tick,
                 seed: event.seed,
@@ -271,29 +300,47 @@ impl Alive {
 
         if with_tnt {
             let cmd = worldfx::summon_tnt(origin).ok_or_else(|| label("Coordonnees invalides"))?;
-            // The engine applies normal command permissions. No result is
-            // provided to .hmod, so we cannot confirm successful summoning.
+            // The command is queued for execution after this hook.
+            // Fuse:1s is the one-tick TNT requested by the old command.
+            // It is not known whether the game accepts the command.
             command::run(&cmd);
             self.trace("SUMMON_REQUEST", "one vanilla TNT requested; server response unavailable");
+            if let Some(motion) = TntMotion::new(origin, Some(origin[1]), clock.game_time) {
+                if self.scheduled.len() >= MAX_SCHEDULED {
+                    self.scheduled.remove(0);
+                    self.diag.cancelled = self.diag.cancelled.saturating_add(1);
+                }
+                self.scheduled.push(Scheduled {
+                    observation: 0,
+                    origin,
+                    dimension: player.dimension.clone(),
+                    estimated_tick: clock.game_time.saturating_add(1),
+                    observed_tick: clock.game_time,
+                    seed: clock.game_time ^ origin[0].to_bits() ^ origin[2].to_bits(),
+                    motion,
+                });
+                self.diag.scheduled = self.diag.scheduled.saturating_add(1);
+                self.trace("SCHEDULED", "commanded TNT fuse 1 tick; success unconfirmed");
+            }
+        } else {
+            if self.active.len() == MAX_ACTIVE {
+                self.active.remove(0);
+                self.diag.cancelled = self.diag.cancelled.saturating_add(1);
+            }
+            self.active.push(Blast {
+                origin,
+                start_tick: clock.game_time,
+                dimension: player.dimension.clone(),
+                seed: clock.game_time ^ origin[0].to_bits() ^ origin[2].to_bits(),
+            });
+            self.diag.started = self.diag.started.saturating_add(1);
+            self.trace("FX_STARTED", "manual preview requested; display unconfirmed");
         }
-
-        if self.active.len() == MAX_ACTIVE {
-            self.active.remove(0);
-            self.diag.cancelled = self.diag.cancelled.saturating_add(1);
-        }
-        self.active.push(Blast {
-            origin,
-            start_tick: clock.game_time,
-            dimension: player.dimension.clone(),
-            seed: clock.game_time ^ origin[0].to_bits() ^ origin[2].to_bits(),
-        });
-        self.diag.started = self.diag.started.saturating_add(1);
-        self.trace("FX_STARTED", "manual preview requested; display unconfirmed");
         self.last_trigger = Some(clock.game_time);
         self.dimension = Some(player.dimension);
 
         Ok(Some(label(if with_tnt {
-            "Commande TNT demandee + apercu 3D. Invocation non confirmee (permissions joueur)"
+            "TNT demandee; animation prevue au tick suivant. Invocation non confirmee"
         } else {
             "Apercu 3D demande, sans destruction. Utiliser /alive diag pour les compteurs"
         })))
@@ -346,7 +393,7 @@ impl Mod for Alive {
         render::set_hud(&[]);
         log::write(
             log::Level::Info,
-            "MOD/INIT | Horizon Alive v0.8 charge. Aucun evenement TNT confirme n'est expose par le SDK.",
+            "MOD/INIT | Horizon Alive v0.9 charge. Aucun evenement TNT confirme n'est expose par le SDK.",
         );
         Ok((Self::load(), Registration::new().command("alive").on_tick()))
     }
@@ -418,7 +465,7 @@ impl Mod for Alive {
         if name != "alive" { return Err(label("Commande inconnue")); }
         match args.trim() {
             "" | "help" => Ok(Some(label(
-                "status|diag|last|tnt|preview|on|off|detect on|off|fx on|off|debug on|off|quality|scale|smoke|flash"
+                "status|diag|tnt|preview|detect on|off|fx on|off|follow estimate|fixed|debug on|off|quality|scale|smoke|flash"
             ))),
             "status" => Ok(Some(self.status())),
             "diag" | "diagnostics" => Ok(Some(label(&self.diag.report()))),
@@ -479,6 +526,18 @@ impl Mod for Alive {
                     point(event.pos), event.dimension, event.estimated_detonation_tick
                 ),
             )))),
+            "follow estimate" => {
+                self.estimated_follow = true;
+                save(FOLLOW, 1);
+                self.settings();
+                Ok(Some(label("Position TNT estimee par physique simplifiee (non garantie)")))
+            }
+            "follow fixed" => {
+                self.estimated_follow = false;
+                save(FOLLOW, 0);
+                self.settings();
+                Ok(Some(label("Position TNT fixee au bloc initial")))
+            }
             "debug on" => {
                 self.debug = true;
                 save(DEBUG, 1);
@@ -559,6 +618,10 @@ impl Mod for Alive {
             8 => {
                 self.debug = !self.debug;
                 save(DEBUG, u8::from(self.debug));
+            }
+            9 => {
+                self.estimated_follow = !self.estimated_follow;
+                save(FOLLOW, u8::from(self.estimated_follow));
             }
             _ => return,
         }
