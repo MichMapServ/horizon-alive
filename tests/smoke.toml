@@ -1,5 +1,4 @@
-# This is an integration scenario for the official Horizon mod sandbox.
-# Runs without a graphical game client.
+# Sandbox integration tests: no GPU or OpenGL surface is available here.
 
 [[step]]
 command = "alive off"
@@ -12,16 +11,56 @@ expect.error = "Enable Horizon Alive with /alive on first"
 [[step]]
 reload = true
 command = "alive status"
-expect.feedback = "Alive: false, 0 particles"
+expect.feedback = "Alive: off; quality: balanced; motion: normal; HUD: on; particles: 0"
 
 [[step]]
 command = "alive on"
 expect.feedback = "Horizon Alive enabled"
 
 [[step]]
-command = "alive demo"
+command = "alive quality high"
+expect.feedback = "Horizon Alive quality: high"
+
+[[step]]
+command = "alive motion reduced"
+expect.feedback = "Horizon Alive camera motion: reduced"
+
+[[step]]
+command = "alive graphics off"
+expect.feedback = "Horizon Alive HUD renderer disabled (diagnostic mode)"
+
+[[step]]
+command = "alive demo water"
+expect.error = "Enable the HUD renderer with /alive graphics on first"
+
+[[step]]
+reload = true
+command = "alive status"
+expect.feedback = "Alive: on; quality: high; motion: reduced; HUD: off; particles: 0"
+
+[[step]]
+command = "alive graphics on"
+expect.feedback = "Horizon Alive HUD renderer enabled"
+
+[[step]]
+command = "alive demo boom"
 expect.feedback = "2D explosion preview"
 
 [[step]]
 ticks = 50
 
+[[step]]
+command = "alive demo water"
+expect.feedback = "2D water ripple preview"
+
+[[step]]
+command = "alive demo punch"
+expect.feedback = "2D swing preview"
+
+[[step]]
+command = "alive demo fireflies"
+expect.feedback = "2D fireflies preview"
+
+[[step]]
+command = "alive quality low"
+expect.feedback = "Horizon Alive quality: low"

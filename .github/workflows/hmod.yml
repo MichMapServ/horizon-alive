@@ -26,7 +26,7 @@ jobs:
           cargo fmt --all
           cargo fmt --all --check
       - name: Rust tests
-        run: cargo test
+        run: cargo test --all-targets
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
       - name: Build .hmod
@@ -39,6 +39,6 @@ jobs:
         run: test -s target/horizon-mod/horizon_alive.hmod && sha256sum target/horizon-mod/horizon_alive.hmod
       - uses: actions/upload-artifact@v4
         with:
-          name: horizon-alive-0.3.3-hmod
+          name: horizon-alive-0.4.0-hmod
           path: target/horizon-mod/horizon_alive.hmod
           if-no-files-found: error

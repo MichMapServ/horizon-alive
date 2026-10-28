@@ -1,7 +1,7 @@
 id = "horizon_alive"
 name = "Horizon Alive"
-version = "0.3.3"
-description = "Ambient particles and attack feedback rendered on the HUD"
+version = "0.4.0"
+description = "Customizable 2D ambient particles, swing feedback, and ripple previews"
 authors = ["Horizon Alive contributors"]
 api = "0.1"
 side = "client"
