@@ -1,4 +1,4 @@
-# Horizon Alive v0.9.0 — suivi estimé de TNT
+# Horizon Alive v0.9.1 — suivi estimé de TNT
 
 Mod WebAssembly **.hmod** écrit en Rust, sans overlay HUD. Les effets du projet WorldFX restent rendus via les commandes vanilla de particules aux coordonnées 3D du monde.
 
@@ -20,6 +20,17 @@ Dans Horizon v0.2.93, le SDK .hmod API 0.1 ne donne ni l'identifiant, ni la posi
 La direction horizontale réelle est issue d'un générateur aléatoire interne du moteur, **inconnu du mod**. Le simulateur utilise un angle déterministe local **qui ne correspond pas nécessairement** à cet angle. Ses hypothèses de plancher ne remplacent pas les collisions, fluides et impulsions de gameplay. Le décalage augmente dans ces cas. Il est donc interdit de qualifier cette approximation de suivi exact.
 
 Les TNT ordinaires amorcées au briquet/charge peuvent uniquement être **inférées** lorsque le joueur vise le bloc puis le voit disparaître. Une détonation réelle ne peut pas être vérifiée. Le rendu via `command::run_quiet` ne fournit aucune confirmation d'affichage et requiert les droits de commande habituels.
+
+## Présentation v0.9.1
+
+- Dans le chat, les commandes et diagnostics utilisent les codes Minecraft `§6` (or), `§e` (ambre), `§b` (cyan), `§a` (vert), `§c` (rouge), `§7`/`§8` (gris), et `§l` (gras). Horizon retire ces codes si les couleurs du chat sont désactivées. Pas de faux balisage Markdown envoyé dans le jeu.
+- `/alive help`, `/alive help 2`, `/alive help 3` : trois pages courtes et thématiques, avec de vrais retours à la ligne.
+- `/alive status` : état visuel aéré, séparant activation, détection, animation, suivi et compteurs.
+- `/alive diag` : trois sections *Détection*, *Animation*, *Rendu* et avertissement explicite que les commandes soumises ne prouvent pas l'affichage.
+- Menu Options > Mods : en-tête or, sections cyan et textes secondaires gris, avec labels français uniformisés et états ACTIF / INACTIF.
+- Aucun changement des API TNT, des règles vanilla ou du moteur de particules : l'effet demeure une **estimation**.
+
+Les tests Rust vérifient notamment le mode sans couleurs, les trois pages d'aide et l'absence de faux état « particules affichées ».
 
 ## Vérification rapide
 

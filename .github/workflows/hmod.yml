@@ -1,4 +1,4 @@
-name: Build Horizon Alive WorldFX TNT Motion Estimate .hmod
+name: Build Horizon Alive WorldFX Polished Interface .hmod
 on:
   push:
     branches: [main, "feat/**", "fix/**"]
@@ -43,6 +43,6 @@ jobs:
           sha256sum target/horizon-mod/horizon_alive.hmod
       - uses: actions/upload-artifact@v4
         with:
-          name: horizon-alive-0.9.0-tnt-pipeline-hmod
+          name: horizon-alive-0.9.1-tnt-pipeline-hmod
           path: target/horizon-mod/horizon_alive.hmod
           if-no-files-found: error

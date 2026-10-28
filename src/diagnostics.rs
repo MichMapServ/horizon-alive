@@ -21,6 +21,7 @@ impl Diagnostics {
         line
     }
 
+    #[cfg(test)]
     pub fn report(&self) -> String {
         format!(
             "Observations: {} | programmes: {} | effets demarres: {} | commandes soumises: {} | termines: {} | annules: {}",
@@ -34,6 +35,7 @@ impl Diagnostics {
     }
 }
 
+#[cfg(test)]
 pub fn label(text: &str) -> String {
     format!("Alive | {text}")
 }

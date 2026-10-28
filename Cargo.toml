@@ -1,9 +1,9 @@
 [package]
 name = "horizon-alive"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2024"
 license = "MIT"
-description = "Experimental TNT trajectory estimation and WorldFX rendering diagnostics for Horizon"
+description = "World-space TNT effects with Minecraft-styled help, status and colored diagnostics"
 publish = false
 
 [lib]

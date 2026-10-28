@@ -12,7 +12,6 @@ pub enum Quality { Low, Balanced, High }
 impl Quality {
     pub fn from_byte(v: u8) -> Self { match v { 0 => Self::Low, 2 => Self::High, _ => Self::Balanced } }
     pub fn as_byte(self) -> u8 { match self { Self::Low => 0, Self::Balanced => 1, Self::High => 2 } }
-    pub fn name(self) -> &'static str { match self { Self::Low => "low", Self::Balanced => "balanced", Self::High => "high" } }
     pub fn next(self) -> Self { match self { Self::Low => Self::Balanced, Self::Balanced => Self::High, Self::High => Self::Low } }
     fn ring(self) -> usize { match self { Self::Low => 8, Self::Balanced => 15, Self::High => 20 } }
     fn fire(self) -> usize { match self { Self::Low => 5, Self::Balanced => 9, Self::High => 13 } }
