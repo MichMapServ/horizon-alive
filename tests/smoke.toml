@@ -1,50 +1,67 @@
-# Sandbox exercises commands and persistence; it cannot render a real GPU view.
+# WorldFX pipeline integration and setting persistence.
+# Real primed entities and the GPU renderer are not present in this sandbox.
 [[step]]
 command = "alive status"
-expect.feedback = "Alive v0.7: on; balanced quality; 1.0x; 0 effects; detector: on; likely ignitions: 0; auto FX: off"
+expect.feedback = "Alive | v0.8 | actif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations"
 
 [[step]]
-command = "alive quality low"
-expect.feedback = "Horizon Alive settings saved"
+command = "alive diag"
+expect.feedback = "Alive | Observations: 0 | programmes: 0 | effets demarres: 0 | commandes soumises: 0 | termines: 0 | annules: 0"
 
 [[step]]
-command = "alive smoke off"
-expect.feedback = "Horizon Alive settings saved"
-
-[[step]]
-command = "alive flash off"
-expect.feedback = "Horizon Alive settings saved"
-
-[[step]]
-command = "alive off"
-expect.feedback = "Horizon Alive disabled"
-
-[[step]]
-reload = true
-command = "alive status"
-expect.feedback = "Alive v0.7: off; low quality; 1.0x; 0 effects; detector: on; likely ignitions: 0; auto FX: off"
-
-[[step]]
-command = "alive on"
-expect.feedback = "Horizon Alive enabled"
+command = "alive diag last"
+expect.feedback = "Alive | Aucun evenement depuis le chargement"
 
 [[step]]
 command = "alive detect last"
-expect.feedback = "No likely TNT ignition observed yet"
-
-[[step]]
-command = "alive detect off"
-expect.feedback = "Local TNT ignition detector disabled"
-
-[[step]]
-command = "alive detect fx on"
-expect.feedback = "Estimated TNT visual animation enabled (80 tick fuse, unconfirmed)"
+expect.feedback = "Alive | Aucun amorcage probable observe"
 
 [[step]]
 command = "alive detect fx off"
-expect.feedback = "Automatic TNT animation disabled; detection still active"
+expect.feedback = "Alive | Animation automatique desactivee; detection conservee"
+
+[[step]]
+command = "alive quality low"
+expect.feedback = "Alive | Preferences enregistrees"
+
+[[step]]
+command = "alive smoke off"
+expect.feedback = "Alive | Preferences enregistrees"
+
+[[step]]
+command = "alive flash off"
+expect.feedback = "Alive | Preferences enregistrees"
+
+[[step]]
+command = "alive debug on"
+expect.feedback = "Alive | Logs TNT detailles actives"
 
 [[step]]
 reload = true
 command = "alive status"
-expect.feedback = "Alive v0.7: on; low quality; 1.0x; 0 effects; detector: on; likely ignitions: 0; auto FX: off"
+expect.feedback = "Alive | v0.8 | actif | detection ON | animation estimee OFF | 0 effets | 0 attentes | 0 observations"
+
+[[step]]
+command = "alive detect fx on"
+expect.feedback = "Alive | Animation 3D activee sur detonations estimees (non confirmees)"
+
+[[step]]
+command = "alive debug off"
+expect.feedback = "Alive | Logs TNT detailles desactives"
+
+[[step]]
+command = "alive off"
+expect.feedback = "Alive | Mod desactive. Effets temporaires annules"
+
+[[step]]
+reload = true
+command = "alive status"
+expect.feedback = "Alive | v0.8 | inactif | detection ON | animation estimee ON | 0 effets | 0 attentes | 0 observations"
+
+[[step]]
+command = "alive on"
+expect.feedback = "Alive | Mod active"
+
+[[step]]
+command = "alive graphics off"
+expect.feedback = "Alive | Aucun effet HUD actif"

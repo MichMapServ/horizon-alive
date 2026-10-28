@@ -1,9 +1,9 @@
 [package]
 name = "horizon-alive"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 license = "MIT"
-description = "WorldFX and conservative local TNT ignition detection for Horizon"
+description = "TNT ignition inference, honest WorldFX pipeline diagnostics and stable .hmod command rendering"
 publish = false
 
 [lib]
