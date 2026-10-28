@@ -57,13 +57,15 @@ mod tests {
 
     #[test]
     fn counters_distinguish_submit_from_display() {
-        let mut d = Diagnostics::default();
-        d.candidates = 2;
-        d.scheduled = 1;
-        d.started = 1;
-        d.batches = 4;
-        d.submitted_commands = 25;
-        d.finished = 1;
+        let d = Diagnostics {
+            candidates: 2,
+            scheduled: 1,
+            started: 1,
+            batches: 4,
+            submitted_commands: 25,
+            finished: 1,
+            ..Default::default()
+        };
         let report = d.report();
         assert!(report.contains("Observations: 2"));
         assert!(report.contains("commandes soumises: 25"));
