@@ -1,53 +1,50 @@
-# Horizon Alive WorldFX v0.7.0
+# Horizon Alive v0.8.0 — TNT pipeline
 
-**This is a real WebAssembly .hmod**, with code in Rust. The new world-space effects are generated using Horizon's verified vanilla `/particle` command implementation instead of the old HUD rectangle engine.
+Sandboxed Minecraft Horizon mod (.hmod) in Rust: the code uses vanilla particle commands with world XYZ positions, not fake HUD overlays.
 
-The mod's visual commands appear at real XYZ coordinates. They are still **vanilla particle sprites**, not custom volumetric meshes, so their appearance will not exactly match the large pixel-art explosion references.
+**Confirmed SDK limitation:** API 0.1 exposes no primed-TNT entity list, no real TNT fuse and no event for priming/detonation. Full coverage of redstone, minecarts, chained TNT, remote TNT or offscreen TNT is impossible using this client-only .hmod. The detector recognises only a **probable local ignition** when the player aims at TNT and uses flint and steel or a fire charge, then the block disappears under a stable camera.
 
-## In-game use
+## What v0.8 fixes
 
-Enable Horizon Alive in Options > Mods. In a creative test world with commands enabled, look at a block no more than 12 blocks away and type:
+- For new installs, detection and its **estimated** automatic particle animation default to ON. Existing stored OFF settings remain OFF.
+- One-line French chat messages and optional diagnostic logs distinguish actual mod startup, probable ignition, estimated detonation, queued particle commands and completion.
+- New /alive diag and /alive diag last commands expose counters and the last recorded stage.
+- Dimension changes and clock rewinds cancel temporary effects and reset pending detection.
+- Existing WorldFX /alive preview, /alive tnt, quality, scale, smoke and flash commands remain available.
+- Automatic detection **never spawns another gameplay explosion**.
 
-- `/alive preview` - show the explosion visual in the world, **no damage and no TNT**.
-- `/alive tnt` - request **one vanilla TNT with fuse 1 tick** at that position, followed by the same world-space visual.
-- `/alive status`, `/alive on`, `/alive off`.
-- `/alive quality low|balanced|high`.
-- `/alive scale 0.5..2.0`.
-- `/alive smoke on|off`, `/alive flash on|off`.
+## Useful in-game commands
 
-Command permissions are those of the player. If cheats are unavailable, `/alive tnt` can fail to summon TNT; the mod cannot discover that outcome and may still show the preview. Use `/alive preview` for a harmless test.
+| Command | Result |
+| --- | --- |
+| /alive status | Current state, observation and active-effect count |
+| /alive diag | Diagnostic counters |
+| /alive diag last | Last pipeline stage |
+| /alive detect last | Last probable ignition position |
+| /alive detect on / off | Switch local detector on/off |
+| /alive detect fx on / off | Switch estimated animation on/off |
+| /alive debug on / off | Additional log messages about submitted vanilla particle commands |
+| /alive preview | Non-destructive XYZ particles at the aimed block |
+| /alive tnt | Requests a single vanilla TNT; requires normal command permissions |
+| /alive quality low / balanced / high | Quality profile |
+| /alive scale 0.5..2.0 | Visual size |
+| /alive smoke on / off | Smoke toggle |
+| /alive flash on / off | Flash toggle |
 
-**Detection:** Horizon v0.2.93's `.hmod` API has no primed-TNT entity list or `prime_fuse` event. `/alive detect on` enables a **best-effort local inference**: aim at TNT with flint and steel or a fire charge, use the item, and keep aiming while the TNT block disappears. It reports a *probable* ignition in chat. This does not detect remote, redstone, explosion-chain, or offscreen priming and cannot confirm whether the server accepted the action. `/alive detect fx on` optionally schedules the existing WorldFX animation approximately 80 ticks later; it is OFF by default pending in-game tests. `/alive detect last` reports last observation. Normal gameplay remains unchanged.
+## Build
 
-## Safety
+On GitHub Actions, the .hmod is published only after Rust unit tests, cargo check, strict Clippy, cargo horizon-mod build/test/check and package verification pass. The SDK is pinned to Horizon tag v0.2.92; the renderer/engine audit refers to v0.2.93.
 
-- No HUD shapes. `render::set_hud(&[])` clears any legacy retained overlay.
-- Never changes the original TNT blast physics or damage radius.
-- At most 3 active effects and 44 visual commands per tick, shared fairly.
-- No native code, shaders, world writes or copied GPU textures.
-- Resets effects after changing dimensions or re-entering a world.
-- Persists quality, size, smoke, flash, and enabled settings.
+    rustup target add wasm32-unknown-unknown
+    cargo install --git https://github.com/horizon-rust/horizon --tag v0.2.92 cargo-horizon-mod
+    cargo fmt --all --check
+    cargo check --all-targets
+    cargo test --all-targets
+    cargo clippy --all-targets -- -D warnings
+    cargo horizon-mod build
+    cargo horizon-mod test
+    cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
 
-## Compile (or download Actions artifact)
+Install horizon_alive.hmod inside horizon-mods next to options.txt. Remove duplicate older copies and enable the mod in Options > Mods. Test in a disposable world with command permissions. Command submission is not proof of visual rendering because command::run_quiet returns no acknowledgement.
 
-The repository workflow compiles and uploads `horizon_alive.hmod` after Rust tests, strict Clippy, sandbox tests, and the official Horizon checker succeed. Install that file (not the source ZIP) inside the `horizon-mods` folder alongside Horizon's `options.txt`.
-
-```sh
-rustup target add wasm32-unknown-unknown
-cargo install --git https://github.com/horizon-rust/horizon --tag v0.2.92 cargo-horizon-mod
-cargo test --all-targets
-cargo horizon-mod build
-cargo horizon-mod test
-cargo horizon-mod check target/horizon-mod/horizon_alive.hmod
-```
-
-Horizon engine tag v0.2.93 has the verified command-side `/particle` implementation. CI does not replace an in-game Intel UHD / OpenGL visual test, and it does not fix the unrelated engine's `COPY_SRC` crash.
-
-## Ignition detector diagnostics
-
-- `/alive detect on` / `/alive detect off`: enable or disable the passive inference.
-- `/alive detect last`: show last inferred TNT position and estimated detonation tick.
-- `/alive detect fx on`: opt in to the **existing** 3D WorldFX at the estimated end of the 80-tick fuse. Approximation only; explosions can move or be shortened.
-- `/alive detect fx off`: continue detecting without spawning automatic visual effects (default).
-
-Reliable event-driven detection of arbitrary vanilla TNT (redstone, chain TNT, server spawned, offscreen) remains blocked by the SDK interface. See `docs/TNT_DETECTION.md`.
+See [TNT pipeline audit and TNT-01–TNT-15 matrix](docs/TNT_AUDIT_V080.md) and [v0.2.93 engine crash diagnosis](docs/ENGINE_CRASH.md).
